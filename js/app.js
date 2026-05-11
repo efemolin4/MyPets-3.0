@@ -517,28 +517,45 @@ function stepBasic() {
 function stepPhysical() {
   const d = state.newPetData;
   const tags = ['Juguetón','Cariñoso','Tranquilo','Activo','Tímido','Sociable','Independiente','Protector'];
+  const colors = ['Negro','Blanco','Gris','Marrón','Dorado','Amarillo','Crema','Naranja','Rojo','Canela','Atigrado','Manchado negro y blanco','Manchado marrón y blanco','Tricolor','Bicolor','Azul grisáceo','Plateado','Otro'];
+  const sizes = [
+    { label: 'Pequeño', range: 'hasta 10 kg' },
+    { label: 'Mediano', range: '10 – 25 kg' },
+    { label: 'Grande',  range: '25 – 45 kg' },
+    { label: 'Gigante', range: 'más de 45 kg' },
+  ];
   return `
     <h2 class="text-lg font-bold text-gray-900 mb-4">Información física</h2>
     <div class="space-y-4">
       <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="form-label">Color</label>
-          <input id="pet-color" type="text" value="${d.color||''}" placeholder="Ej: Negro con blanco" class="input-field" />
+          <select id="pet-color" class="input-field">
+            ${colors.map(c => `<option ${(d.color||'')=== c?'selected':''}>${c}</option>`).join('')}
+          </select>
         </div>
         <div>
           <label class="form-label">Tamaño</label>
           <select id="pet-size" class="input-field">
-            ${['Pequeño','Mediano','Grande','Gigante'].map(s => `<option ${d.sizeRange===s?'selected':''}>${s}</option>`).join('')}
+            ${sizes.map(s => `<option value="${s.label}" ${d.sizeRange===s.label?'selected':''}>${s.label} (${s.range})</option>`).join('')}
           </select>
         </div>
-        <div>
-          <label class="form-label">Peso (kg)</label>
-          <input id="pet-wkg" type="number" min="0" value="${d.weightKg||''}" placeholder="0" class="input-field" />
+      </div>
+      <div>
+        <label class="form-label">Peso</label>
+        <div class="grid grid-cols-2 gap-3 mt-1">
+          <div class="relative">
+            <input id="pet-wkg" type="number" min="0" max="200" value="${d.weightKg||''}" placeholder="0" class="input-field pr-10" />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">kg</span>
+          </div>
+          <div class="relative">
+            <input id="pet-wgr" type="number" min="0" max="999" value="${d.weightGr||''}" placeholder="0" class="input-field pr-10" />
+            <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">gr</span>
+          </div>
         </div>
-        <div>
-          <label class="form-label">Peso (gr)</label>
-          <input id="pet-wgr" type="number" min="0" max="999" value="${d.weightGr||''}" placeholder="0" class="input-field" />
-        </div>
+        <p class="text-xs text-gray-400 mt-1">Ejemplo: 4 kg 500 gr → ingresa 4 en kilos y 500 en gramos</p>
+      </div>
+      <div class="grid grid-cols-2 gap-4">
         <div>
           <label class="form-label">Estado reproductivo</label>
           <select id="pet-repro" class="input-field">
