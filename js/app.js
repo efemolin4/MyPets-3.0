@@ -2,6 +2,30 @@
    MYPETS 3.0 — Aplicación Principal
    ============================================================ */
 
+// ---- VACUNAS POR ESPECIE ----
+const VACCINES_BY_SPECIES = {
+  Perro:   ['Antirrábica','Polivalente DHPP (Distemper, Hepatitis, Parvovirus, Parainfluenza)','Parvovirus','Moquillo (Distemper)','Hepatitis Infecciosa Canina','Leptospirosis','Parainfluenza','Bordetella (Tos de las perreras)','Coronavirus Canino','Leishmaniasis'],
+  Gato:    ['Antirrábica','Triple Felina (Panleucopenia, Rinotraqueítis, Calicivirus)','Cuádruple Felina','Leucemia Felina (FeLV)','Peritonitis Infecciosa Felina (FIP)','Clamidiosis Felina','Inmunodeficiencia Felina (FIV)'],
+  Ave:     ['Viruela Aviar','Newcastle','Psitacosis (Clamidiosis)','Influenza Aviar','Marek'],
+  Conejo:  ['Mixomatosis','Enfermedad Vírica Hemorrágica (RHD)','Combinada Mixomatosis + RHD'],
+  Pez:     ['Furunculosis','Vibriosis','Yersiniosis'],
+  Hámster: ['Consultar con veterinario'],
+  Reptil:  ['Consultar con veterinario'],
+  Otro:    ['Consultar con veterinario'],
+};
+
+// ---- PERIODICIDADES ----
+const PERIODICITY_OPTIONS = [
+  { label: 'Sin periodicidad',     months: 0  },
+  { label: 'Mensual (1 mes)',      months: 1  },
+  { label: 'Bimestral (2 meses)', months: 2  },
+  { label: 'Trimestral (3 meses)',months: 3  },
+  { label: 'Semestral (6 meses)', months: 6  },
+  { label: 'Anual (12 meses)',     months: 12 },
+  { label: 'Cada 2 años',         months: 24 },
+  { label: 'Cada 3 años',         months: 36 },
+];
+
 // ---- RAZAS POR ESPECIE ----
 const BREEDS = {
   Perro: ['Mestizo','Labrador Retriever','Golden Retriever','Pastor Alemán','Bulldog Francés','Bulldog Inglés','Poodle','Beagle','Chihuahua','Yorkshire Terrier','Shih Tzu','Schnauzer','Dachshund','Husky Siberiano','Border Collie','Boxer','Cocker Spaniel','Doberman','Rottweiler','Pomerania','Maltés','Bichón Frisé','Akita','Shar Pei','Weimaraner','Dálmata','Samoyedo','Chow Chow','Setter Irlandés','Gran Danés'],
@@ -1080,27 +1104,49 @@ function closeModal(e) {
 }
 
 function openVaccineModal(petId) {
+  const pet = state.pets.find(p => p.id === petId);
+  const species = pet?.species || 'Perro';
+  const vaccineList = VACCINES_BY_SPECIES[species] || VACCINES_BY_SPECIES.Otro;
   openModal(`
     <div class="modal-box p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">Nueva vacuna</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-1">Nueva vacuna</h3>
+      <p class="text-xs text-gray-400 mb-4">Vacunas para ${species} · La alerta se enviará automáticamente en la fecha calculada</p>
       <form onsubmit="saveVaccine(event,'${petId}')" class="space-y-3">
+        <div>
+          <label class="form-label">Vacuna *</label>
+          <select id="v-name" required class="input-field">
+            <option value="">— Selecciona una vacuna —</option>
+            ${vaccineList.map(v => `<option>${v}</option>`).join('')}
+          </select>
+        </div>
+        <div>
+          <label class="form-label">Código / Lote</label>
+          <input id="v-code" placeholder="Ej: RAB-001" class="input-field" />
+        </div>
         <div class="grid grid-cols-2 gap-3">
-          <div class="col-span-2"><label class="form-label">Nombre de la vacuna *</label>
-            <input id="v-name" required placeholder="Ej: Antirrábica" class="input-field" /></div>
-          <div><label class="form-label">Código</label><input id="v-code" placeholder="RAB-001" class="input-field" /></div>
-          <div><label class="form-label">Fecha de aplicación *</label><input id="v-date" type="date" required class="input-field" /></div>
-          <div><label class="form-label">Periodicidad (meses)</label><input id="v-period" type="number" min="1" placeholder="12" class="input-field" /></div>
-          <div><label class="form-label">Alerta</label>
-            <select id="v-alert" class="input-field">
-              <option>Sin recordatorio</option><option>Mismo día</option>
-              <option>1 semana antes</option><option>1 mes antes</option>
+          <div>
+            <label class="form-label">Fecha de aplicación *</label>
+            <input id="v-date" type="date" required class="input-field" onchange="updateNextDatePreview('v')" />
+          </div>
+          <div>
+            <label class="form-label">Periodicidad</label>
+            <select id="v-period" class="input-field" onchange="updateNextDatePreview('v')">
+              ${PERIODICITY_OPTIONS.map(p => `<option value="${p.months}">${p.label}</option>`).join('')}
             </select>
           </div>
-          <div class="col-span-2"><label class="form-label">Costo (CLP)</label><input id="v-cost" type="number" min="0" placeholder="0" class="input-field" /></div>
+        </div>
+        <div id="v-next-preview" class="hidden bg-brand-50 border border-brand-100 rounded-xl px-4 py-3 text-sm">
+          <span class="text-gray-500">Próxima aplicación:</span>
+          <span id="v-next-date" class="font-semibold text-brand-700 ml-1"></span>
+          <div class="text-xs text-brand-500 mt-0.5">🔔 Se enviará una alerta automáticamente ese día</div>
+        </div>
+        <div>
+          <label class="form-label">Costo (CLP)</label>
+          <input id="v-cost" type="number" min="0" placeholder="0" class="input-field" />
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
-          <button type="submit" class="btn-primary flex-1">Guardar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar vacuna</button>
         </div>
       </form>
     </div>`);
@@ -1109,23 +1155,48 @@ function openVaccineModal(petId) {
 function openDewormModal(petId) {
   openModal(`
     <div class="modal-box p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">Nueva desparasitación</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-1">Nueva desparasitación</h3>
+      <p class="text-xs text-gray-400 mb-4">La alerta se enviará automáticamente en la fecha calculada</p>
       <form onsubmit="saveDeworming(event,'${petId}')" class="space-y-3">
+        <div>
+          <label class="form-label">Producto *</label>
+          <input id="d-product" required placeholder="Nombre del producto" class="input-field" />
+        </div>
         <div class="grid grid-cols-2 gap-3">
-          <div class="col-span-2"><label class="form-label">Producto *</label><input id="d-product" required placeholder="Nombre del producto" class="input-field" /></div>
-          <div><label class="form-label">Tipo</label>
+          <div>
+            <label class="form-label">Tipo</label>
             <select id="d-type" class="input-field"><option>Interna</option><option>Externa</option><option>Ambas</option></select>
           </div>
-          <div><label class="form-label">Formato</label>
+          <div>
+            <label class="form-label">Formato</label>
             <select id="d-format" onchange="updateDoseUnit()" class="input-field">
               <option>Comprimido</option><option>Pipeta</option><option>Collar</option>
               <option>Spray</option><option>Jarabe</option><option>Inyección</option>
             </select>
           </div>
-          <div><label class="form-label">Dosis</label><input id="d-dose" placeholder="1" class="input-field" /></div>
-          <div><label class="form-label">Unidad</label><input id="d-unit" placeholder="Comprimidos" class="input-field" /></div>
-          <div><label class="form-label">Fecha *</label><input id="d-date" type="date" required class="input-field" /></div>
-          <div><label class="form-label">Periodicidad (meses)</label><input id="d-period" type="number" min="1" placeholder="3" class="input-field" /></div>
+          <div>
+            <label class="form-label">Dosis</label>
+            <input id="d-dose" placeholder="1" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Unidad</label>
+            <input id="d-unit" placeholder="Comprimidos" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Fecha de aplicación *</label>
+            <input id="d-date" type="date" required class="input-field" onchange="updateNextDatePreview('d')" />
+          </div>
+          <div>
+            <label class="form-label">Periodicidad</label>
+            <select id="d-period" class="input-field" onchange="updateNextDatePreview('d')">
+              ${PERIODICITY_OPTIONS.map(p => `<option value="${p.months}">${p.label}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div id="d-next-preview" class="hidden bg-teal-50 border border-teal-100 rounded-xl px-4 py-3 text-sm">
+          <span class="text-gray-500">Próxima aplicación:</span>
+          <span id="d-next-date" class="font-semibold text-teal-700 ml-1"></span>
+          <div class="text-xs text-teal-500 mt-0.5">🔔 Se enviará una alerta automáticamente ese día</div>
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
@@ -1405,7 +1476,7 @@ function saveVaccine(e, petId) {
   const g = id => document.getElementById(id)?.value;
   const date = g('v-date'), period = g('v-period');
   const v = { id: genId(), name: g('v-name'), code: g('v-code'), date, periodicity: period,
-    nextDate: period ? addMonths(date, parseInt(period)) : '', alertType: g('v-alert'), cost: g('v-cost') };
+    nextDate: period ? addMonths(date, parseInt(period)) : '', alertType: 'automática', cost: g('v-cost') };
   pet.vaccines = pet.vaccines || [];
   pet.vaccines.push(v);
   if (v.cost) { state.expenses.push({ id: genId(), description: `Vacuna ${v.name} - ${pet.name}`, amount: v.cost, date, category: 'Veterinaria', pet: pet.name }); }
@@ -1576,6 +1647,23 @@ function toggleAllergy(a) {
 function toggleTutor2(el) {
   const fields = document.getElementById('tutor2-fields');
   if (fields) fields.classList.toggle('hidden', !el.checked);
+}
+
+function updateNextDatePreview(prefix) {
+  const dateEl = document.getElementById(`${prefix}-date`);
+  const periodEl = document.getElementById(`${prefix}-period`);
+  const preview = document.getElementById(`${prefix}-next-preview`);
+  const nextLabel = document.getElementById(`${prefix}-next-date`);
+  if (!dateEl || !periodEl || !preview || !nextLabel) return;
+  const months = parseInt(periodEl.value);
+  const date = dateEl.value;
+  if (date && months > 0) {
+    const next = addMonths(date, months);
+    nextLabel.textContent = formatDate(next);
+    preview.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+  }
 }
 
 function updateBreedOptions(species) {
