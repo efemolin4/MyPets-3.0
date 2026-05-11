@@ -604,8 +604,12 @@ function stepHealth() {
         </div>
       </div>
       <div>
-        <label class="form-label">Condiciones crónicas</label>
-        <textarea id="pet-conditions" rows="2" placeholder="Ej: Displasia de cadera, Diabetes..." class="input-field resize-none">${d.chronicConditions||''}</textarea>
+        <label class="form-label">Condiciones crónicas <span class="text-gray-400 font-normal">(selecciona una o más)</span></label>
+        <div class="flex flex-wrap gap-2 mt-1">
+          ${['Ninguna','Diabetes','Epilepsia','Hipotiroidismo','Hipertiroidismo','Displasia de cadera','Displasia de codo','Enfermedad renal crónica','Enfermedad cardíaca','Artritis','Obesidad','Cushing','Addison','Pancreatitis crónica','Enfermedad inflamatoria intestinal','Asma','Dermatitis atópica','Cáncer','Cataratas','Glaucoma','Otra'].map(c => `
+            <button type="button" onclick="toggleCondition('${c}')"
+              class="tag ${(d.chronicConditions||[]).includes(c) ? 'selected' : ''}">${c}</button>`).join('')}
+        </div>
       </div>
       <hr class="border-gray-100" />
       <h3 class="font-semibold text-gray-700 text-sm">Veterinario de cabecera</h3>
@@ -758,7 +762,7 @@ function tabGeneral(pet) {
         <h3 class="font-semibold text-gray-700 mb-3">Salud</h3>
         <dl class="space-y-2 text-sm">
           ${infoRow('Alergias', (pet.allergies||[]).join(', ')||'Ninguna')}
-          ${infoRow('Condiciones crónicas', pet.chronicConditions||'Ninguna')}
+          ${infoRow('Condiciones crónicas', Array.isArray(pet.chronicConditions) ? (pet.chronicConditions.join(', ')||'Ninguna') : (pet.chronicConditions||'Ninguna'))}
         </dl>
       </div>` : ''}
       ${pet.vet?.name ? `
@@ -1336,7 +1340,7 @@ function collectStepData() {
     if (g('pet-repro')) d.reproductiveStatus = g('pet-repro').value;
     if (g('pet-chip')) d.chipNumber = g('pet-chip').value;
   } else if (state.addPetStep === 3) {
-    if (g('pet-conditions')) d.chronicConditions = g('pet-conditions').value;
+    // chronicConditions se gestiona con toggleCondition()
     d.vet = {
       name: g('vet-name')?.value||'', clinic: g('vet-clinic')?.value||'',
       phone: g('vet-phone')?.value||'', email: g('vet-email')?.value||'',
@@ -1538,6 +1542,24 @@ function toggleTag(t) {
   state.newPetData.personalityTags = tags;
   document.querySelectorAll('.tag').forEach(el => {
     if (el.textContent.trim() === t) el.classList.toggle('selected', tags.includes(t));
+  });
+}
+
+function toggleCondition(c) {
+  if (!state.newPetData.chronicConditions) state.newPetData.chronicConditions = [];
+  const list = state.newPetData.chronicConditions;
+  if (c === 'Ninguna') {
+    state.newPetData.chronicConditions = list.includes('Ninguna') ? [] : ['Ninguna'];
+  } else {
+    state.newPetData.chronicConditions = list.filter(x => x !== 'Ninguna');
+    const idx = state.newPetData.chronicConditions.indexOf(c);
+    if (idx >= 0) state.newPetData.chronicConditions.splice(idx, 1); else state.newPetData.chronicConditions.push(c);
+  }
+  document.querySelectorAll('.tag').forEach(el => {
+    const val = el.textContent.trim();
+    if (['Ninguna','Diabetes','Epilepsia','Hipotiroidismo','Hipertiroidismo','Displasia de cadera','Displasia de codo','Enfermedad renal crónica','Enfermedad cardíaca','Artritis','Obesidad','Cushing','Addison','Pancreatitis crónica','Enfermedad inflamatoria intestinal','Asma','Dermatitis atópica','Cáncer','Cataratas','Glaucoma','Otra'].includes(val)) {
+      el.classList.toggle('selected', state.newPetData.chronicConditions.includes(val));
+    }
   });
 }
 
