@@ -823,6 +823,7 @@ function tabVaccines(pet) {
                      <div class="font-medium text-gray-900 text-sm">${v.name}</div>
                      <div class="text-xs text-gray-400">${v.code ? `Código: ${v.code} · ` : ''}Aplicada: ${formatDate(v.date)}</div>
                      ${v.nextDate ? `<div class="text-xs mt-1 ${new Date(v.nextDate) < new Date() ? 'text-red-500' : 'text-green-600'}">Próxima: ${formatDate(v.nextDate)}</div>` : ''}
+                     ${v.alertType ? `<div class="text-xs text-brand-500">🔔 Alerta: ${{same:'El mismo día',week:'1 semana antes',custom:`${v.alertDays} días antes`}[v.alertType]||v.alertType}</div>` : ''}
                      ${v.cost ? `<div class="text-xs text-gray-400">Costo: ${fmtCLP(v.cost)}</div>` : ''}
                    </div>
                  </div>
@@ -852,6 +853,7 @@ function tabDeworming(pet) {
                      <div class="text-xs text-gray-400">${d.type} · ${d.format} · Fecha: ${formatDate(d.date)}</div>
                      <div class="text-xs text-gray-400">Dosis: ${d.dose} ${d.unit}</div>
                      ${d.nextDate ? `<div class="text-xs text-green-600">Próxima: ${formatDate(d.nextDate)}</div>` : ''}
+                     ${d.alertType ? `<div class="text-xs text-teal-500">🔔 Alerta: ${{same:'El mismo día',week:'1 semana antes',custom:`${d.alertDays} días antes`}[d.alertType]||d.alertType}</div>` : ''}
                    </div>
                  </div>
                  <button onclick="deleteDeworming('${pet.id}','${d.id}')" class="text-red-400 hover:text-red-600 text-xs p-1">✕</button>
@@ -883,6 +885,7 @@ function tabMedications(pet) {
                      <div class="text-xs text-gray-400">${m.dose} · ${m.frequency}</div>
                      <div class="text-xs text-gray-400">${formatDate(m.startDate)} → ${formatDate(m.endDate)}</div>
                      <div class="text-xs text-gray-400">Stock: ${m.stock||0} unidades</div>
+                     ${m.reminder ? `<div class="text-xs text-brand-500 mt-0.5">🔔 Recordatorio: ${{exact:'En el horario exacto','15':'15 min antes','30':'30 min antes','60':'60 min antes'}[m.reminder]||m.reminder}</div>` : ''}
                    </div>
                  </div>
                  <button onclick="deleteMedication('${pet.id}','${m.id}')" class="text-red-400 hover:text-red-600 text-xs p-1">✕</button>
@@ -1138,7 +1141,21 @@ function openVaccineModal(petId) {
         <div id="v-next-preview" class="hidden bg-brand-50 border border-brand-100 rounded-xl px-4 py-3 text-sm">
           <span class="text-gray-500">Próxima aplicación:</span>
           <span id="v-next-date" class="font-semibold text-brand-700 ml-1"></span>
-          <div class="text-xs text-brand-500 mt-0.5">🔔 Se enviará una alerta automáticamente ese día</div>
+        </div>
+        <div>
+          <label class="form-label">¿Cuándo recibir la alerta?</label>
+          <div class="flex gap-2 mt-1 flex-wrap">
+            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 semana antes'},{v:'custom',l:'Personalizado'}].map(o => `
+              <button type="button" onclick="selectVaccineAlert('${o.v}')" id="va-${o.v}"
+                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300">
+                ${o.l}
+              </button>`).join('')}
+          </div>
+          <input type="hidden" id="v-alert" value="same" />
+          <div id="va-custom-field" class="hidden mt-2">
+            <label class="form-label">Días de anticipación</label>
+            <input id="v-alert-days" type="number" min="1" max="365" placeholder="Ej: 15" class="input-field" />
+          </div>
         </div>
         <div>
           <label class="form-label">Costo (CLP)</label>
@@ -1196,7 +1213,21 @@ function openDewormModal(petId) {
         <div id="d-next-preview" class="hidden bg-teal-50 border border-teal-100 rounded-xl px-4 py-3 text-sm">
           <span class="text-gray-500">Próxima aplicación:</span>
           <span id="d-next-date" class="font-semibold text-teal-700 ml-1"></span>
-          <div class="text-xs text-teal-500 mt-0.5">🔔 Se enviará una alerta automáticamente ese día</div>
+        </div>
+        <div>
+          <label class="form-label">¿Cuándo recibir la alerta?</label>
+          <div class="flex gap-2 mt-1 flex-wrap">
+            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 semana antes'},{v:'custom',l:'Personalizado'}].map(o => `
+              <button type="button" onclick="selectDewormAlert('${o.v}')" id="da-${o.v}"
+                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-teal-300">
+                ${o.l}
+              </button>`).join('')}
+          </div>
+          <input type="hidden" id="d-alert" value="same" />
+          <div id="da-custom-field" class="hidden mt-2">
+            <label class="form-label">Días de anticipación</label>
+            <input id="d-alert-days" type="number" min="1" max="365" placeholder="Ej: 15" class="input-field" />
+          </div>
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
@@ -1223,10 +1254,21 @@ function openMedModal(petId) {
           <div><label class="form-label">Inicio *</label><input id="m-start" type="date" required class="input-field" /></div>
           <div><label class="form-label">Fin</label><input id="m-end" type="date" class="input-field" /></div>
           <div><label class="form-label">Stock (unidades)</label><input id="m-stock" type="number" min="0" placeholder="0" class="input-field" /></div>
-          <div class="flex items-center gap-2 mt-4">
+          <div class="flex items-center gap-2 mt-2">
             <input type="checkbox" id="m-active" checked class="rounded text-brand-500" />
             <label for="m-active" class="text-sm text-gray-700">Tratamiento activo</label>
           </div>
+        </div>
+        <div>
+          <label class="form-label">Recordatorio de cada dosis</label>
+          <div class="flex gap-2 mt-1 flex-wrap">
+            ${[{v:'exact',l:'En el horario exacto'},{v:'15',l:'15 min antes'},{v:'30',l:'30 min antes'},{v:'60',l:'60 min antes'}].map(o => `
+              <button type="button" onclick="selectMedReminder('${o.v}')" id="mr-${o.v}"
+                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300">
+                ${o.l}
+              </button>`).join('')}
+          </div>
+          <input type="hidden" id="m-reminder" value="exact" />
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
@@ -1476,7 +1518,8 @@ function saveVaccine(e, petId) {
   const g = id => document.getElementById(id)?.value;
   const date = g('v-date'), period = g('v-period');
   const v = { id: genId(), name: g('v-name'), code: g('v-code'), date, periodicity: period,
-    nextDate: period ? addMonths(date, parseInt(period)) : '', alertType: 'automática', cost: g('v-cost') };
+    nextDate: period ? addMonths(date, parseInt(period)) : '',
+    alertType: g('v-alert'), alertDays: g('v-alert-days'), cost: g('v-cost') };
   pet.vaccines = pet.vaccines || [];
   pet.vaccines.push(v);
   if (v.cost) { state.expenses.push({ id: genId(), description: `Vacuna ${v.name} - ${pet.name}`, amount: v.cost, date, category: 'Veterinaria', pet: pet.name }); }
@@ -1496,7 +1539,8 @@ function saveDeworming(e, petId) {
   const g = id => document.getElementById(id)?.value;
   const date = g('d-date'), period = g('d-period');
   const d = { id: genId(), product: g('d-product'), type: g('d-type'), format: g('d-format'),
-    dose: g('d-dose'), unit: g('d-unit'), date, nextDate: period ? addMonths(date, parseInt(period)) : '' };
+    dose: g('d-dose'), unit: g('d-unit'), date, nextDate: period ? addMonths(date, parseInt(period)) : '',
+    alertType: g('d-alert'), alertDays: g('d-alert-days') };
   pet.deworming = pet.deworming || [];
   pet.deworming.push(d);
   saveState(); closeModal(); render();
@@ -1515,7 +1559,8 @@ function saveMedication(e, petId) {
   const g = id => document.getElementById(id)?.value;
   const m = { id: genId(), name: g('m-name'), dose: g('m-dose'), frequency: g('m-freq'),
     startDate: g('m-start'), endDate: g('m-end'), stock: g('m-stock'),
-    active: document.getElementById('m-active')?.checked };
+    active: document.getElementById('m-active')?.checked,
+    reminder: g('m-reminder') || 'exact' };
   pet.medications = pet.medications || [];
   pet.medications.push(m);
   saveState(); closeModal(); render();
@@ -1647,6 +1692,34 @@ function toggleAllergy(a) {
 function toggleTutor2(el) {
   const fields = document.getElementById('tutor2-fields');
   if (fields) fields.classList.toggle('hidden', !el.checked);
+}
+
+function selectVaccineAlert(val) {
+  document.getElementById('v-alert').value = val;
+  ['same','week','custom'].forEach(o => {
+    const btn = document.getElementById('va-'+o);
+    if (btn) btn.className = `px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${o===val ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-brand-300'}`;
+  });
+  const cf = document.getElementById('va-custom-field');
+  if (cf) cf.classList.toggle('hidden', val !== 'custom');
+}
+
+function selectDewormAlert(val) {
+  document.getElementById('d-alert').value = val;
+  ['same','week','custom'].forEach(o => {
+    const btn = document.getElementById('da-'+o);
+    if (btn) btn.className = `px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${o===val ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-gray-200 text-gray-500 hover:border-teal-300'}`;
+  });
+  const cf = document.getElementById('da-custom-field');
+  if (cf) cf.classList.toggle('hidden', val !== 'custom');
+}
+
+function selectMedReminder(val) {
+  document.getElementById('m-reminder').value = val;
+  ['exact','15','30','60'].forEach(o => {
+    const btn = document.getElementById('mr-'+o);
+    if (btn) btn.className = `px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all ${o===val ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-brand-300'}`;
+  });
 }
 
 function updateNextDatePreview(prefix) {
