@@ -2,6 +2,18 @@
    MYPETS 3.0 — Aplicación Principal
    ============================================================ */
 
+// ---- RAZAS POR ESPECIE ----
+const BREEDS = {
+  Perro: ['Mestizo','Labrador Retriever','Golden Retriever','Pastor Alemán','Bulldog Francés','Bulldog Inglés','Poodle','Beagle','Chihuahua','Yorkshire Terrier','Shih Tzu','Schnauzer','Dachshund','Husky Siberiano','Border Collie','Boxer','Cocker Spaniel','Doberman','Rottweiler','Pomerania','Maltés','Bichón Frisé','Akita','Shar Pei','Weimaraner','Dálmata','Samoyedo','Chow Chow','Setter Irlandés','Gran Danés'],
+  Gato: ['Mestizo','Siamés','Persa','Maine Coon','Bengalí','Ragdoll','Abisinio','Sphynx','British Shorthair','Scottish Fold','Noruego del Bosque','Angora Turco','Birmano','Ruso Azul','Somalí','Tonkinés','Devon Rex','Cornish Rex','Manx','Bombay'],
+  Ave: ['Mestizo','Canario','Periquito','Loro','Cacatúa','Agaporni','Ninfas','Jilguero','Paloma','Cotorra'],
+  Conejo: ['Mestizo','Enano de Holanda','Angora','Rex','Lionhead','Mini Lop','Belier','Californiano','Nueva Zelanda'],
+  Pez: ['Mestizo','Betta','Goldfish','Guppy','Tetra','Ángel','Disco','Koi','Molly','Platy','Oscar'],
+  Hámster: ['Mestizo','Sirio','Ruso','Chino','Roborovski','Campbell'],
+  Reptil: ['Mestizo','Dragón Barbudo','Gecko Leopardo','Iguana Verde','Camaleón','Tortuga','Boa','Pitón','Anolis'],
+  Otro: ['Mestizo','Otro'],
+};
+
 // ---- ESTADO ----
 const defaultState = {
   user: null, isLoggedIn: false,
@@ -478,8 +490,8 @@ function stepBasic() {
         </div>
         <div>
           <label class="form-label">Especie *</label>
-          <select id="pet-species" class="input-field">
-            ${['Perro','Gato','Ave','Conejo','Pez','Hámster','Reptil','Otro'].map(s => `<option ${d.species===s?'selected':''}>${s}</option>`).join('')}
+          <select id="pet-species" class="input-field" onchange="updateBreedOptions(this.value)">
+            ${['Perro','Gato','Ave','Conejo','Pez','Hámster','Reptil','Otro'].map(s => `<option ${(d.species||'Perro')===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
         <div>
@@ -490,7 +502,9 @@ function stepBasic() {
         </div>
         <div>
           <label class="form-label">Raza</label>
-          <input id="pet-breed" type="text" value="${d.breed||''}" placeholder="Mestizo" class="input-field" />
+          <select id="pet-breed" class="input-field">
+            ${(BREEDS[d.species || 'Perro'] || BREEDS.Otro).map(b => `<option ${(d.breed||'Mestizo')===b?'selected':''}>${b}</option>`).join('')}
+          </select>
         </div>
         <div>
           <label class="form-label">Fecha de nacimiento</label>
@@ -1523,6 +1537,13 @@ function toggleAllergy(a) {
 function toggleTutor2(el) {
   const fields = document.getElementById('tutor2-fields');
   if (fields) fields.classList.toggle('hidden', !el.checked);
+}
+
+function updateBreedOptions(species) {
+  const select = document.getElementById('pet-breed');
+  if (!select) return;
+  const breeds = BREEDS[species] || BREEDS.Otro;
+  select.innerHTML = breeds.map(b => `<option ${b==='Mestizo'?'selected':''}>${b}</option>`).join('');
 }
 
 function updateDoseUnit() {
