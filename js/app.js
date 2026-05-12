@@ -346,44 +346,52 @@ function viewLogin() {
         </div>
       </div>
     </div>
-    <div class="flex-1 flex items-center justify-center p-6">
-      <div class="w-full max-w-sm animate-scale-in">
-        <div class="lg:hidden text-center mb-8">
-          <div class="text-5xl mb-2">🐾</div>
-          <h1 class="text-2xl font-bold text-gray-900">MyPets 3.0</h1>
-        </div>
-        <h2 class="text-2xl font-bold text-gray-900 mb-1">Bienvenido de vuelta</h2>
-        <p class="text-gray-500 text-sm mb-6">Ingresa a tu cuenta para continuar</p>
-        <form onsubmit="handleLogin(event)" class="space-y-4">
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input id="l-email" type="email" required placeholder="tu@email.com" class="input-field" />
+    <div class="flex-1 overflow-y-auto">
+      <div class="min-h-full flex flex-col justify-center px-5 py-8 sm:px-8 lg:items-center">
+        <div class="w-full max-w-sm mx-auto animate-scale-in">
+          <!-- Logo solo móvil: compacto -->
+          <div class="lg:hidden flex items-center gap-3 mb-6">
+            <div class="w-10 h-10 rounded-2xl bg-brand-gradient flex items-center justify-center text-white font-black text-sm">MP</div>
+            <div>
+              <div class="font-bold text-gray-900 leading-none">MyPets 3.0</div>
+              <div class="text-xs text-brand-400 mt-0.5">Tu compañero digital</div>
+            </div>
           </div>
-          <div>
-            <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
-            <input id="l-pass" type="password" required placeholder="••••••••" class="input-field" />
+          <h2 class="text-2xl font-bold text-gray-900 mb-1">Bienvenido de vuelta</h2>
+          <p class="text-gray-500 text-sm mb-5">Ingresa a tu cuenta para continuar</p>
+          <form onsubmit="handleLogin(event)" class="space-y-3">
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+              <input id="l-email" type="email" required autocomplete="email" placeholder="tu@email.com" class="input-field" />
+            </div>
+            <div>
+              <label class="block text-sm font-medium text-gray-700 mb-1">Contraseña</label>
+              <input id="l-pass" type="password" required autocomplete="current-password" placeholder="••••••••" class="input-field" />
+            </div>
+            <div class="flex items-center justify-between text-sm">
+              <label class="flex items-center gap-2 text-gray-600 cursor-pointer">
+                <input type="checkbox" class="rounded text-brand-500" /> Recordarme
+              </label>
+              <button type="button" onclick="navigate('forgot')" class="text-brand-600 hover:underline text-xs font-medium">¿Olvidaste tu contraseña?</button>
+            </div>
+            <button type="submit" class="btn-primary w-full !py-3 text-base">Iniciar Sesión</button>
+          </form>
+          <div class="mt-4 text-center text-sm text-gray-500">
+            ¿No tienes cuenta? <button onclick="navigate('register')" class="text-brand-600 font-semibold hover:underline">Regístrate gratis</button>
           </div>
-          <div class="flex items-center justify-between text-sm">
-            <label class="flex items-center gap-2 text-gray-600 cursor-pointer">
-              <input type="checkbox" class="rounded text-brand-500" /> Recordarme
-            </label>
-            <button type="button" onclick="navigate('forgot')" class="text-brand-600 hover:underline">¿Olvidaste tu contraseña?</button>
+          <div class="mt-4 p-4 bg-gradient-to-br from-brand-50 to-teal-50 rounded-2xl border border-brand-100">
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-xs font-bold text-brand-700">🧪 Cuenta de prueba</span>
+            </div>
+            <div class="flex gap-4 text-xs text-gray-600 mb-3">
+              <div><span class="text-gray-400">Email: </span><strong class="select-all">demo@mypets.cl</strong></div>
+              <div><span class="text-gray-400">Clave: </span><strong class="select-all">demo123</strong></div>
+            </div>
+            <button type="button" onclick="loadDemoAndLogin()"
+              class="w-full py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-700 transition-colors">
+              ⚡ Entrar con datos de demo
+            </button>
           </div>
-          <button type="submit" class="btn-primary w-full">Iniciar Sesión</button>
-        </form>
-        <div class="mt-4 text-center text-sm text-gray-500">
-          ¿No tienes cuenta? <button onclick="navigate('register')" class="text-brand-600 font-medium hover:underline">Regístrate gratis</button>
-        </div>
-        <div class="mt-4 p-4 bg-gradient-to-br from-brand-50 to-teal-50 rounded-2xl border border-brand-100">
-          <div class="text-xs font-bold text-brand-700 mb-2">🧪 Cuenta de prueba</div>
-          <div class="text-xs text-gray-600 space-y-0.5 mb-3">
-            <div><span class="text-gray-400">Email:</span> <strong class="select-all">demo@mypets.cl</strong></div>
-            <div><span class="text-gray-400">Clave:</span> <strong class="select-all">demo123</strong></div>
-          </div>
-          <button type="button" onclick="loadDemoAndLogin()"
-            class="w-full py-2 rounded-xl bg-brand-600 text-white text-xs font-bold hover:bg-brand-700 transition-colors">
-            ⚡ Ingresar con datos de prueba (3 años)
-          </button>
         </div>
       </div>
     </div>
@@ -393,15 +401,16 @@ function viewLogin() {
 // ---- VISTA: REGISTER ----
 function viewRegister() {
   return `
-  <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 to-teal-50 p-6">
-    <div class="w-full max-w-sm animate-scale-in">
-      <div class="text-center mb-6">
-        <div class="text-4xl mb-2">🐾</div>
+  <div class="min-h-screen overflow-y-auto bg-gradient-to-br from-brand-50 to-teal-50">
+    <div class="min-h-full flex flex-col justify-center px-5 py-8 sm:px-8 sm:items-center">
+    <div class="w-full max-w-sm mx-auto animate-scale-in">
+      <div class="text-center mb-5">
+        <div class="inline-flex w-12 h-12 rounded-2xl bg-brand-gradient items-center justify-center text-white font-black mb-3">MP</div>
         <h2 class="text-2xl font-bold text-gray-900">Crear cuenta</h2>
         <p class="text-sm text-gray-500 mt-1">Únete a MyPets gratis</p>
       </div>
-      <div class="bg-white rounded-2xl shadow-sm p-6 space-y-4">
-        <form onsubmit="handleRegister(event)" class="space-y-4">
+      <div class="bg-white rounded-2xl shadow-sm p-5 space-y-4">
+        <form onsubmit="handleRegister(event)" class="space-y-3">
           <div>
             <label class="block text-sm font-medium text-gray-700 mb-1">Nombre completo</label>
             <input id="r-name" type="text" required placeholder="Tu nombre" class="input-field" />
@@ -418,12 +427,13 @@ function viewRegister() {
             <label class="block text-sm font-medium text-gray-700 mb-1">Confirmar contraseña</label>
             <input id="r-pass2" type="password" required placeholder="Repite la contraseña" class="input-field" />
           </div>
-          <button type="submit" class="btn-primary w-full">Crear cuenta gratuita</button>
+          <button type="submit" class="btn-primary w-full !py-3">Crear cuenta gratuita</button>
         </form>
         <div class="text-center text-sm text-gray-500">
-          ¿Ya tienes cuenta? <button onclick="navigate('login')" class="text-brand-600 font-medium hover:underline">Inicia sesión</button>
+          ¿Ya tienes cuenta? <button onclick="navigate('login')" class="text-brand-600 font-semibold hover:underline">Inicia sesión</button>
         </div>
       </div>
+    </div>
     </div>
   </div>`;
 }
@@ -654,24 +664,24 @@ function viewAddPet() {
         </div>
       </div>
 
-      <div class="flex items-center mb-8 px-2">
+      <div class="flex items-center mb-5 px-1">
         ${steps.map((s, i) => `
           <div class="flex-1 flex flex-col items-center">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold mb-1
+            <div class="w-7 h-7 sm:w-8 sm:h-8 rounded-full flex items-center justify-center text-xs sm:text-sm font-bold mb-1
               ${i+1 < step ? 'bg-brand-500 text-white' : i+1 === step ? 'bg-brand-600 text-white ring-4 ring-brand-100' : 'bg-gray-100 text-gray-400'}">
               ${i+1 < step ? '✓' : i+1}
             </div>
-            <div class="text-xs text-center hidden sm:block ${i+1 === step ? 'text-brand-600 font-medium' : 'text-gray-400'}">${s}</div>
+            <div class="text-[10px] sm:text-xs text-center ${i+1 === step ? 'text-brand-600 font-medium' : 'text-gray-400'}">${s.split(' ')[0]}</div>
           </div>
-          ${i < steps.length-1 ? `<div class="flex-1 h-0.5 mb-5 ${i+1 < step ? 'bg-brand-500' : 'bg-gray-200'}"></div>` : ''}
+          ${i < steps.length-1 ? `<div class="flex-1 h-0.5 mb-4 ${i+1 < step ? 'bg-brand-500' : 'bg-gray-200'}"></div>` : ''}
         `).join('')}
       </div>
 
-      <div class="bg-white rounded-2xl shadow-sm p-6 animate-scale-in">
+      <div class="bg-white rounded-2xl shadow-sm p-4 sm:p-6 animate-scale-in">
         ${step === 1 ? stepBasic() : step === 2 ? stepPhysical() : step === 3 ? stepHealth() : stepTutors()}
-        <div class="flex gap-3 mt-6 pt-6 border-t border-gray-100">
-          ${step > 1 ? `<button onclick="prevStep()" class="btn-secondary flex-1">← Anterior</button>` : ''}
-          <button onclick="nextStep()" class="btn-primary flex-1">${step === 4 ? '✓ Guardar mascota' : 'Siguiente →'}</button>
+        <div class="flex gap-3 mt-5 pt-5 border-t border-gray-100">
+          ${step > 1 ? `<button onclick="prevStep()" class="btn-secondary flex-1 !py-3">← Anterior</button>` : ''}
+          <button onclick="nextStep()" class="btn-primary flex-1 !py-3">${step === 4 ? '✓ Guardar mascota' : 'Siguiente →'}</button>
         </div>
       </div>
     </div>
@@ -691,32 +701,38 @@ function stepBasic() {
           Subir foto <input type="file" accept="image/*" class="hidden" onchange="previewPhoto(event)" />
         </label>
       </div>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2">
+      <div class="space-y-3">
+        <div>
           <label class="form-label">Nombre *</label>
           <input id="pet-name" type="text" required value="${d.name||''}" placeholder="Nombre de tu mascota" class="input-field" />
         </div>
-        <div>
-          <label class="form-label">Especie *</label>
-          <select id="pet-species" class="input-field" onchange="updateBreedOptions(this.value)">
-            ${['Perro','Gato','Ave','Conejo','Pez','Hámster','Reptil','Otro'].map(s => `<option ${(d.species||'Perro')===s?'selected':''}>${s}</option>`).join('')}
-          </select>
+        <!-- Especie + Sexo siempre en 2 col (selects cortos) -->
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Especie *</label>
+            <select id="pet-species" class="input-field" onchange="updateBreedOptions(this.value)">
+              ${['Perro','Gato','Ave','Conejo','Pez','Hámster','Reptil','Otro'].map(s => `<option ${(d.species||'Perro')===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Sexo</label>
+            <select id="pet-sex" class="input-field">
+              ${['Macho','Hembra'].map(s => `<option ${d.sex===s?'selected':''}>${s}</option>`).join('')}
+            </select>
+          </div>
         </div>
-        <div>
-          <label class="form-label">Sexo</label>
-          <select id="pet-sex" class="input-field">
-            ${['Macho','Hembra'].map(s => `<option ${d.sex===s?'selected':''}>${s}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Raza</label>
-          <select id="pet-breed" class="input-field">
-            ${(BREEDS[d.species || 'Perro'] || BREEDS.Otro).map(b => `<option ${(d.breed||'Mestizo')===b?'selected':''}>${b}</option>`).join('')}
-          </select>
-        </div>
-        <div>
-          <label class="form-label">Fecha de nacimiento</label>
-          <input id="pet-dob" type="date" value="${d.dateOfBirth||''}" class="input-field" />
+        <!-- Raza + Fecha: 1 col en mobile, 2 col en sm+ -->
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Raza</label>
+            <select id="pet-breed" class="input-field">
+              ${(BREEDS[d.species || 'Perro'] || BREEDS.Otro).map(b => `<option ${(d.breed||'Mestizo')===b?'selected':''}>${b}</option>`).join('')}
+            </select>
+          </div>
+          <div>
+            <label class="form-label">Fecha de nacimiento</label>
+            <input id="pet-dob" type="date" value="${d.dateOfBirth||''}" class="input-field" />
+          </div>
         </div>
       </div>
     </div>`;
@@ -734,8 +750,9 @@ function stepPhysical() {
   ];
   return `
     <h2 class="text-lg font-bold text-gray-900 mb-4">Información física</h2>
-    <div class="space-y-4">
-      <div class="grid grid-cols-2 gap-4">
+    <div class="space-y-3">
+      <!-- Color + Tamaño: 2 col (selects cortos, OK en mobile) -->
+      <div class="grid grid-cols-2 gap-3">
         <div>
           <label class="form-label">Color</label>
           <select id="pet-color" class="input-field">
@@ -749,6 +766,7 @@ function stepPhysical() {
           </select>
         </div>
       </div>
+      <!-- Peso -->
       <div>
         <label class="form-label">Peso</label>
         <div class="grid grid-cols-2 gap-3 mt-1">
@@ -761,9 +779,10 @@ function stepPhysical() {
             <span class="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-semibold text-gray-400">gr</span>
           </div>
         </div>
-        <p class="text-xs text-gray-400 mt-1">Ejemplo: 4 kg 500 gr → ingresa 4 en kilos y 500 en gramos</p>
+        <p class="text-xs text-gray-400 mt-1">Ej: 4 kg 500 gr → ingresa 4 en kilos y 500 en gramos</p>
       </div>
-      <div class="grid grid-cols-2 gap-4">
+      <!-- Estado reproductivo + Chip: 1 col en mobile -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <div>
           <label class="form-label">Estado reproductivo</label>
           <select id="pet-repro" class="input-field">
@@ -820,23 +839,25 @@ function stepHealth() {
         </div>
       </div>
       <hr class="border-gray-100" />
-      <h3 class="font-semibold text-gray-700 text-sm">Veterinario de cabecera</h3>
-      <div class="grid grid-cols-2 gap-4">
-        <div class="col-span-2">
+      <h3 class="font-semibold text-gray-700 text-sm">Veterinario de cabecera <span class="text-gray-400 font-normal">(opcional)</span></h3>
+      <div class="space-y-3">
+        <div>
           <label class="form-label">Nombre del veterinario</label>
           <input id="vet-name" type="text" value="${d.vet?.name||''}" placeholder="Dr. García" class="input-field" />
         </div>
-        <div class="col-span-2">
+        <div>
           <label class="form-label">Clínica</label>
           <input id="vet-clinic" type="text" value="${d.vet?.clinic||''}" placeholder="Clínica Veterinaria" class="input-field" />
         </div>
-        <div>
-          <label class="form-label">Teléfono</label>
-          <input id="vet-phone" type="tel" value="${d.vet?.phone||''}" placeholder="+56 9 1234 5678" class="input-field" />
-        </div>
-        <div>
-          <label class="form-label">Email</label>
-          <input id="vet-email" type="email" value="${d.vet?.email||''}" placeholder="vet@clinica.cl" class="input-field" />
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Teléfono</label>
+            <input id="vet-phone" type="tel" value="${d.vet?.phone||''}" placeholder="+56 9 1234 5678" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Email</label>
+            <input id="vet-email" type="email" value="${d.vet?.email||''}" placeholder="vet@clinica.cl" class="input-field" />
+          </div>
         </div>
       </div>
     </div>`;
