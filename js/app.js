@@ -1797,14 +1797,14 @@ function openMedModal(petId) {
           <label class="form-label">Fecha inicio *</label>
           <input id="m-start" type="date" required value="${today}" class="input-field" oninput="updateMedPreview()" />
         </div>
-        <!-- Hora inicio + Días: 2 columnas -->
-        <div class="grid grid-cols-2 gap-3">
+        <!-- Hora inicio + Días: 3fr + 2fr para que el label quepa -->
+        <div class="grid gap-3" style="grid-template-columns:3fr 2fr">
           <div>
             <label class="form-label">Hora inicio *</label>
             <input id="m-start-time" type="time" required value="08:00" class="input-field" oninput="updateMedPreview()" />
           </div>
           <div>
-            <label class="form-label">N° días</label>
+            <label class="form-label">Días</label>
             <input id="m-days" type="number" min="1" placeholder="7" class="input-field" oninput="updateMedPreview()" />
           </div>
         </div>
