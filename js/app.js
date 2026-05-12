@@ -123,6 +123,7 @@ function sidebar() {
     { v:'pets',      icon:'🐾', label:'Mis Mascotas' },
     { v:'calendar',  icon:'📅', label:'Agenda' },
     { v:'finance',   icon:'💰', label:'Finanzas' },
+    { v:'botiquin',  icon:'🧴', label:'Botiquín' },
   ];
   return `
   <aside class="hidden md:flex flex-col w-64 bg-white border-r border-gray-100 fixed inset-y-0 left-0 z-20 shadow-sm">
@@ -157,6 +158,7 @@ function bottomNav() {
     { v:'pets',      icon:'🐾', label:'Mascotas' },
     { v:'calendar',  icon:'📅', label:'Agenda' },
     { v:'finance',   icon:'💰', label:'Finanzas' },
+    { v:'botiquin',  icon:'🧴', label:'Botiquín' },
   ];
   return `
   <nav class="md:hidden fixed bottom-0 inset-x-0 bg-white border-t border-gray-100 z-20 safe-area-bottom">
@@ -882,10 +884,10 @@ function tabMedications(pet) {
                        <span class="font-medium text-gray-900 text-sm">${m.name}</span>
                        ${m.active ? '<span class="badge bg-green-100 text-green-700">Activo</span>' : '<span class="badge bg-gray-100 text-gray-500">Finalizado</span>'}
                      </div>
-                     <div class="text-xs text-gray-400">${m.dose} · ${m.frequency}</div>
-                     <div class="text-xs text-gray-400">${formatDate(m.startDate)} → ${formatDate(m.endDate)}</div>
-                     <div class="text-xs text-gray-400">Stock: ${m.stock||0} unidades</div>
-                     ${m.reminder ? `<div class="text-xs text-brand-500 mt-0.5">🔔 Recordatorio: ${{exact:'En el horario exacto','15':'15 min antes','30':'30 min antes','60':'60 min antes'}[m.reminder]||m.reminder}</div>` : ''}
+                     <div class="text-xs text-gray-400">${m.dose || `${m.doseVal||''} ${m.doseUnit||''}`} · ${m.frequency}</div>
+                     <div class="text-xs text-gray-400">${formatDate(m.startDate)}${m.endDate ? ` → ${formatDate(m.endDate)}` : ''}${m.startTime ? ` · ⏰ ${m.startTime}` : ''}</div>
+                     ${m.stockTotal ? `<div class="text-xs text-gray-400">Stock: ${m.stockTotal} ${m.stockUnit||''}${m.expiry ? ` · Cad: ${formatDate(m.expiry)}` : ''}</div>` : ''}
+                     ${m.reminder ? `<div class="text-xs text-brand-500 mt-0.5">🔔 ${{exact:'Horario exacto','15':'15 min antes','30':'30 min antes','60':'60 min antes'}[m.reminder]||m.reminder}</div>` : ''}
                    </div>
                  </div>
                  <button onclick="deleteMedication('${pet.id}','${m.id}')" class="text-red-400 hover:text-red-600 text-xs p-1">✕</button>
@@ -1255,31 +1257,108 @@ function openDewormModal(petId) {
 }
 
 function openMedModal(petId) {
+  const today = new Date().toISOString().slice(0,10);
   openModal(`
     <div class="modal-box p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">Nuevo medicamento</h3>
-      <form onsubmit="saveMedication(event,'${petId}')" class="space-y-3">
+      <div class="flex items-center gap-2 mb-1">
+        <span class="text-2xl">💊</span>
+        <h3 class="text-lg font-bold text-gray-900">Registrar Medicamento</h3>
+      </div>
+      <p class="text-xs text-gray-400 mb-4">Los horarios se calculan automáticamente según la frecuencia</p>
+      <form onsubmit="saveMedication(event,'${petId}')" class="space-y-4">
+
+        <div>
+          <label class="form-label">Nombre *</label>
+          <input id="m-name" required placeholder="Nombre del medicamento" class="input-field" />
+        </div>
+
         <div class="grid grid-cols-2 gap-3">
-          <div class="col-span-2"><label class="form-label">Medicamento *</label><input id="m-name" required placeholder="Nombre del medicamento" class="input-field" /></div>
-          <div class="col-span-2"><label class="form-label">Dosis</label><input id="m-dose" placeholder="Ej: 1 comprimido" class="input-field" /></div>
-          <div class="col-span-2"><label class="form-label">Frecuencia</label>
-            <select id="m-freq" class="input-field">
-              <option>Cada 8 horas</option><option>Cada 12 horas</option><option>Cada 24 horas</option>
-              <option>Cada 48 horas</option><option>1 vez/semana</option><option>Según prescripción</option>
+          <div>
+            <label class="form-label">Dosis *</label>
+            <input id="m-dose-val" type="number" min="0" step="0.1" required placeholder="Ej: 500" class="input-field" oninput="updateMedPreview()" />
+          </div>
+          <div>
+            <label class="form-label">Unidad</label>
+            <select id="m-unit" class="input-field" onchange="updateMedPreview()">
+              <option value="mg">mg</option>
+              <option value="ml">ml</option>
+              <option value="Comprimido(s)">Comprimido(s)</option>
+              <option value="Gotas">Gotas</option>
+              <option value="UI">UI</option>
             </select>
           </div>
-          <div><label class="form-label">Inicio *</label><input id="m-start" type="date" required class="input-field" /></div>
-          <div><label class="form-label">Fin</label><input id="m-end" type="date" class="input-field" /></div>
-          <div><label class="form-label">Stock (unidades)</label><input id="m-stock" type="number" min="0" placeholder="0" class="input-field" /></div>
-          <div class="flex items-center gap-2 mt-2">
-            <input type="checkbox" id="m-active" checked class="rounded text-brand-500" />
-            <label for="m-active" class="text-sm text-gray-700">Tratamiento activo</label>
+        </div>
+
+        <div>
+          <label class="form-label">Frecuencia *</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-500 whitespace-nowrap">Cada</span>
+            <input id="m-freq-n" type="number" min="1" max="72" value="8" class="input-field w-20 text-center" oninput="updateMedPreview()" />
+            <select id="m-freq-unit" class="input-field" onchange="updateMedPreview()">
+              <option value="horas">Horas</option>
+              <option value="minutos">Minutos</option>
+            </select>
+          </div>
+          <div id="m-freq-preview" class="text-xs text-brand-600 mt-1 font-medium"></div>
+        </div>
+
+        <div id="m-schedules-box" class="hidden bg-brand-50 rounded-xl p-3">
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-2">Horarios calculados</div>
+          <div id="m-schedules" class="flex flex-wrap gap-2"></div>
+        </div>
+
+        <div class="grid grid-cols-3 gap-3">
+          <div>
+            <label class="form-label">Fecha inicio *</label>
+            <input id="m-start" type="date" required value="${today}" class="input-field" oninput="updateMedPreview()" />
+          </div>
+          <div>
+            <label class="form-label">Hora inicio *</label>
+            <input id="m-start-time" type="time" required value="08:00" class="input-field" oninput="updateMedPreview()" />
+          </div>
+          <div>
+            <label class="form-label">Días tratamiento</label>
+            <input id="m-days" type="number" min="1" placeholder="7" class="input-field" oninput="updateMedPreview()" />
           </div>
         </div>
+
+        <div id="m-enddate-box" class="hidden">
+          <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">Fecha de término</div>
+          <div id="m-enddate-text" class="text-base font-bold text-brand-600"></div>
+        </div>
+
+        <hr class="border-gray-100" />
         <div>
-          <label class="form-label">Recordatorio de cada dosis</label>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-sm font-semibold text-gray-700">📦 Stock del medicamento <span class="text-gray-400 font-normal">(opcional)</span></label>
+          </div>
+          <div class="grid grid-cols-3 gap-3">
+            <div>
+              <label class="form-label">Cantidad total</label>
+              <input id="m-stock-total" type="number" min="0" placeholder="0" class="input-field" />
+            </div>
+            <div>
+              <label class="form-label">Unidad stock</label>
+              <select id="m-stock-unit" class="input-field">
+                <option>Comprimidos</option><option>ml</option><option>mg</option><option>Ampollas</option><option>Frascos</option>
+              </select>
+            </div>
+            <div>
+              <label class="form-label">Fecha caducidad</label>
+              <input id="m-expiry" type="date" class="input-field" />
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <label class="form-label">Costo (CLP)</label>
+          <input id="m-cost" type="number" min="0" placeholder="0" class="input-field" />
+        </div>
+
+        <div>
+          <label class="form-label">🔔 Recordatorio por dosis</label>
           <div class="flex gap-2 mt-1 flex-wrap">
-            ${[{v:'exact',l:'En el horario exacto'},{v:'15',l:'15 min antes'},{v:'30',l:'30 min antes'},{v:'60',l:'60 min antes'}].map(o => `
+            ${[{v:'exact',l:'Horario exacto'},{v:'15',l:'15 min antes'},{v:'30',l:'30 min antes'},{v:'60',l:'60 min antes'}].map(o => `
               <button type="button" onclick="selectMedReminder('${o.v}')" id="mr-${o.v}"
                 class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300">
                 ${o.l}
@@ -1287,12 +1366,19 @@ function openMedModal(petId) {
           </div>
           <input type="hidden" id="m-reminder" value="exact" />
         </div>
-        <div class="flex gap-3 pt-2">
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="m-active" checked class="rounded text-brand-500" />
+          <label for="m-active" class="text-sm text-gray-700 font-medium">Tratamiento activo</label>
+        </div>
+
+        <div class="flex gap-3 pt-1">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
-          <button type="submit" class="btn-primary flex-1">Guardar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar medicamento</button>
         </div>
       </form>
     </div>`);
+  setTimeout(() => updateMedPreview(), 50);
 }
 
 function openHistoryModal(petId) {
@@ -1581,12 +1667,32 @@ function saveMedication(e, petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const m = { id: genId(), name: g('m-name'), dose: g('m-dose'), frequency: g('m-freq'),
-    startDate: g('m-start'), endDate: g('m-end'), stock: g('m-stock'),
+  const freqN = g('m-freq-n'), freqUnit = g('m-freq-unit');
+  const days = parseInt(g('m-days') || 0);
+  const startDate = g('m-start');
+  let endDate = '';
+  if (days && startDate) {
+    const d = new Date(startDate + 'T12:00:00');
+    d.setDate(d.getDate() + days);
+    endDate = d.toISOString().slice(0,10);
+  }
+  const m = {
+    id: genId(), name: g('m-name'),
+    doseVal: g('m-dose-val'), doseUnit: g('m-unit'),
+    dose: `${g('m-dose-val')} ${g('m-unit')}`,
+    freqN, freqUnit, frequency: `Cada ${freqN} ${freqUnit}`,
+    startDate, startTime: g('m-start-time'), treatmentDays: days, endDate,
+    stockTotal: g('m-stock-total'), stockUnit: g('m-stock-unit'), expiry: g('m-expiry'),
+    cost: g('m-cost'),
     active: document.getElementById('m-active')?.checked,
-    reminder: g('m-reminder') || 'exact' };
+    reminder: g('m-reminder') || 'exact',
+  };
   pet.medications = pet.medications || [];
   pet.medications.push(m);
+  if (m.cost) {
+    state.expenses.push({ id: genId(), description: `Medicamento ${m.name} - ${pet.name}`,
+      amount: m.cost, date: startDate, category: 'Medicamentos', pet: pet.name });
+  }
   saveState(); closeModal(); render();
   showToast('Medicamento registrado ✓', 'success');
 }
@@ -1738,6 +1844,59 @@ function selectDewormAlert(val) {
   if (cf) cf.classList.toggle('hidden', val !== 'custom');
 }
 
+function updateMedPreview() {
+  const freqN = parseInt(document.getElementById('m-freq-n')?.value || 0);
+  const freqUnit = document.getElementById('m-freq-unit')?.value || 'horas';
+  const startTime = document.getElementById('m-start-time')?.value || '08:00';
+  const startDate = document.getElementById('m-start')?.value;
+  const days = parseInt(document.getElementById('m-days')?.value || 0);
+  const doseVal = document.getElementById('m-dose-val')?.value;
+  const unit = document.getElementById('m-unit')?.value;
+
+  // Frequency preview
+  const freqPreview = document.getElementById('m-freq-preview');
+  if (freqPreview && freqN > 0) {
+    if (freqUnit === 'horas' && freqN < 48) {
+      const dosesDay = Math.round(24 / freqN);
+      freqPreview.textContent = `→ ${dosesDay} dosis al día · cada ${freqN} horas`;
+    } else {
+      freqPreview.textContent = `→ Cada ${freqN} ${freqUnit}`;
+    }
+  }
+
+  // Schedule calculation
+  const box = document.getElementById('m-schedules-box');
+  const sched = document.getElementById('m-schedules');
+  if (box && sched && freqN > 0 && freqUnit === 'horas' && freqN <= 24 && startTime) {
+    const [h, m2] = startTime.split(':').map(Number);
+    const times = [];
+    let cur = h * 60 + m2;
+    const steps = Math.round(24 / freqN);
+    for (let i = 0; i < steps; i++) {
+      const hh = String(Math.floor((cur % 1440) / 60)).padStart(2,'0');
+      const mm = String((cur % 1440) % 60).padStart(2,'0');
+      times.push(`${hh}:${mm}`);
+      cur += freqN * 60;
+    }
+    sched.innerHTML = times.map(t => `<span class="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-lg text-sm font-semibold text-brand-700 shadow-sm">🕐 ${t}</span>`).join('');
+    box.classList.remove('hidden');
+  } else if (box) {
+    box.classList.add('hidden');
+  }
+
+  // End date calculation
+  const endBox = document.getElementById('m-enddate-box');
+  const endText = document.getElementById('m-enddate-text');
+  if (endBox && endText && days > 0 && startDate) {
+    const d = new Date(startDate + 'T12:00:00');
+    d.setDate(d.getDate() + days);
+    endText.textContent = d.toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+    endBox.classList.remove('hidden');
+  } else if (endBox) {
+    endBox.classList.add('hidden');
+  }
+}
+
 function selectMedReminder(val) {
   document.getElementById('m-reminder').value = val;
   ['exact','15','30','60'].forEach(o => {
@@ -1832,6 +1991,107 @@ function injectStyles() {
   document.head.appendChild(style);
 }
 
+// ---- VISTA: BOTIQUÍN ----
+function viewBotiquin() {
+  const pets = state.pets;
+  const allMeds = pets.flatMap(p => (p.medications||[]).map(m => ({ ...m, petName: p.name, petId: p.id, petSpecies: p.species })));
+  const today = new Date().toISOString().slice(0,10);
+  const active = allMeds.filter(m => m.active);
+  const expiringSoon = allMeds.filter(m => m.expiry && m.expiry <= new Date(Date.now()+30*86400000).toISOString().slice(0,10));
+  const lowStock = allMeds.filter(m => m.stockTotal && parseInt(m.stockTotal) <= 5);
+
+  const filterPet = state.botiquinFilter || '';
+
+  const displayed = allMeds.filter(m => !filterPet || m.petName === filterPet);
+
+  return appShell(`
+    ${pageHeader('Botiquín 🧴', 'Todos los medicamentos de tus mascotas',
+      `<button onclick="navigate('pets')" class="btn-secondary text-sm">Ver mascotas</button>`)}
+
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
+      ${statCard('💊','Total medicamentos', allMeds.length, 'brand')}
+      ${statCard('✅','Tratamientos activos', active.length, 'teal')}
+      ${statCard('⚠️','Stock bajo', lowStock.length, 'amber')}
+      ${statCard('📅','Por vencer (30 días)', expiringSoon.length, 'red')}
+    </div>
+
+    ${expiringSoon.length > 0 ? `
+    <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-6">
+      <h3 class="font-semibold text-amber-700 mb-2">⚠️ Medicamentos próximos a vencer</h3>
+      <div class="flex flex-wrap gap-2">
+        ${expiringSoon.map(m => `
+          <div class="bg-white rounded-xl px-3 py-2 text-sm border border-amber-200">
+            <span class="font-medium">${m.name}</span>
+            <span class="text-gray-400 ml-1">(${m.petName})</span>
+            <span class="text-amber-600 ml-1">· Vence: ${formatDate(m.expiry)}</span>
+          </div>`).join('')}
+      </div>
+    </div>` : ''}
+
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <h3 class="font-semibold text-gray-700">Todos los medicamentos</h3>
+        <div class="flex items-center gap-2">
+          <select onchange="state.botiquinFilter=this.value;render()" class="input-field text-sm py-1.5 w-auto">
+            <option value="">Todas las mascotas</option>
+            ${pets.map(p => `<option ${filterPet===p.name?'selected':''}>${p.name}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+
+      ${displayed.length === 0
+        ? emptyState('💊','Sin medicamentos registrados','Agrega medicamentos desde el perfil de cada mascota')
+        : `<div class="space-y-3">
+             ${displayed.map(m => {
+               const stockPct = m.stockTotal ? Math.min(100, Math.round((parseInt(m.stockTotal)/Math.max(parseInt(m.stockTotal),1))*100)) : null;
+               const isExpired = m.expiry && m.expiry < today;
+               const isExpiringSoon = m.expiry && !isExpired && m.expiry <= new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+               const reminderLabel = {exact:'Horario exacto','15':'15 min antes','30':'30 min antes','60':'60 min antes'}[m.reminder] || m.reminder;
+               return `
+               <div class="border border-gray-100 rounded-2xl p-4 hover:border-brand-200 transition-colors">
+                 <div class="flex items-start justify-between gap-3">
+                   <div class="flex items-start gap-3 flex-1 min-w-0">
+                     <div class="w-10 h-10 rounded-xl ${m.active ? 'bg-brand-50' : 'bg-gray-50'} flex items-center justify-center text-xl flex-shrink-0">💊</div>
+                     <div class="flex-1 min-w-0">
+                       <div class="flex items-center gap-2 flex-wrap">
+                         <span class="font-semibold text-gray-900">${m.name}</span>
+                         ${m.active ? '<span class="badge bg-green-100 text-green-700">Activo</span>' : '<span class="badge bg-gray-100 text-gray-500">Finalizado</span>'}
+                         ${isExpired ? '<span class="badge bg-red-100 text-red-600">Vencido</span>' : ''}
+                         ${isExpiringSoon ? '<span class="badge bg-amber-100 text-amber-600">Por vencer</span>' : ''}
+                       </div>
+                       <div class="text-xs text-gray-400 mt-0.5">
+                         🐾 ${m.petName} · ${m.dose || `${m.doseVal} ${m.doseUnit}`} · ${m.frequency}
+                       </div>
+                       <div class="text-xs text-gray-400">
+                         📅 ${formatDate(m.startDate)}${m.endDate ? ` → ${formatDate(m.endDate)}` : ''}
+                         ${m.startTime ? ` · ⏰ ${m.startTime}` : ''}
+                       </div>
+                       ${m.reminder ? `<div class="text-xs text-brand-500 mt-0.5">🔔 ${reminderLabel}</div>` : ''}
+                       ${m.stockTotal ? `
+                         <div class="mt-2">
+                           <div class="flex justify-between text-xs text-gray-500 mb-1">
+                             <span>Stock: ${m.stockTotal} ${m.stockUnit || ''}</span>
+                             ${m.expiry ? `<span class="${isExpired?'text-red-500':isExpiringSoon?'text-amber-500':'text-gray-400'}">Cad: ${formatDate(m.expiry)}</span>` : ''}
+                           </div>
+                           <div class="w-full bg-gray-100 rounded-full h-1.5">
+                             <div class="h-1.5 rounded-full ${parseInt(m.stockTotal)<=5?'bg-red-400':parseInt(m.stockTotal)<=15?'bg-amber-400':'bg-green-400'}"
+                               style="width:${Math.min(100,parseInt(m.stockTotal)/30*100)}%"></div>
+                           </div>
+                         </div>` : ''}
+                     </div>
+                   </div>
+                   <div class="flex gap-2">
+                     <button onclick="openPet('${m.petId}');setTab('medicamentos')" class="text-xs text-brand-600 hover:underline whitespace-nowrap">Ver ficha</button>
+                     <button onclick="deleteMedication('${m.petId}','${m.id}')" class="text-red-400 hover:text-red-600 text-xs p-1">✕</button>
+                   </div>
+                 </div>
+               </div>`;
+             }).join('')}
+           </div>`}
+    </div>
+  `);
+}
+
 // ---- RENDER ----
 function render() {
   const app = document.getElementById('app');
@@ -1846,6 +2106,7 @@ function render() {
   else if (v === 'petProfile') app.innerHTML = viewPetProfile();
   else if (v === 'calendar')   app.innerHTML = viewCalendar();
   else if (v === 'finance')    app.innerHTML = viewFinance();
+  else if (v === 'botiquin')   app.innerHTML = viewBotiquin();
   else navigate('dashboard');
 }
 
