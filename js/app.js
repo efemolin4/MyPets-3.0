@@ -1599,7 +1599,7 @@ function openVaccineModal(petId) {
   const species = pet?.species || 'Perro';
   const vaccineList = VACCINES_BY_SPECIES[species] || VACCINES_BY_SPECIES.Otro;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-1">Nueva vacuna</h3>
       <p class="text-xs text-gray-400 mb-4">Vacunas para ${species} · La alerta se enviará automáticamente en la fecha calculada</p>
       <form onsubmit="saveVaccine(event,'${petId}')" class="space-y-3">
@@ -1614,7 +1614,7 @@ function openVaccineModal(petId) {
           <label class="form-label">Código / Lote</label>
           <input id="v-code" placeholder="Ej: RAB-001" class="input-field" />
         </div>
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="form-label">Fecha de aplicación *</label>
             <input id="v-date" type="date" required class="input-field" onchange="updateNextDatePreview('v')" />
@@ -1632,10 +1632,10 @@ function openVaccineModal(petId) {
         </div>
         <div>
           <label class="form-label">¿Cuándo recibir la alerta?</label>
-          <div class="flex gap-2 mt-1 flex-wrap">
-            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 semana antes'},{v:'custom',l:'Personalizado'}].map(o => `
+          <div class="grid grid-cols-3 gap-2 mt-1">
+            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 sem antes'},{v:'custom',l:'Personalizado'}].map(o => `
               <button type="button" onclick="selectVaccineAlert('${o.v}')" id="va-${o.v}"
-                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300">
+                class="py-2.5 px-1 rounded-xl border-2 text-xs font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300 text-center leading-tight">
                 ${o.l}
               </button>`).join('')}
           </div>
@@ -1659,7 +1659,7 @@ function openVaccineModal(petId) {
 
 function openDewormModal(petId) {
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-1">Nueva desparasitación</h3>
       <p class="text-xs text-gray-400 mb-4">La alerta se enviará automáticamente en la fecha calculada</p>
       <form onsubmit="saveDeworming(event,'${petId}')" class="space-y-3">
@@ -1695,7 +1695,7 @@ function openDewormModal(petId) {
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
             <label class="form-label">Fecha de aplicación *</label>
             <input id="d-date" type="date" required class="input-field" onchange="updateNextDatePreview('d')" />
@@ -1715,10 +1715,10 @@ function openDewormModal(petId) {
 
         <div>
           <label class="form-label">¿Cuándo recibir la alerta?</label>
-          <div class="flex gap-2 mt-1 flex-wrap">
-            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 semana antes'},{v:'custom',l:'Personalizado'}].map(o => `
+          <div class="grid grid-cols-3 gap-2 mt-1">
+            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 sem antes'},{v:'custom',l:'Personalizado'}].map(o => `
               <button type="button" onclick="selectDewormAlert('${o.v}')" id="da-${o.v}"
-                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-teal-300">
+                class="py-2.5 px-1 rounded-xl border-2 text-xs font-medium transition-all border-gray-200 text-gray-500 hover:border-teal-300 text-center leading-tight">
                 ${o.l}
               </button>`).join('')}
           </div>
@@ -1745,13 +1745,13 @@ function openDewormModal(petId) {
 function openMedModal(petId) {
   const today = new Date().toISOString().slice(0,10);
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <div class="flex items-center gap-2 mb-1">
         <span class="text-2xl">💊</span>
         <h3 class="text-lg font-bold text-gray-900">Registrar Tratamiento</h3>
       </div>
       <p class="text-xs text-gray-400 mb-4">Los horarios se calculan automáticamente según la frecuencia</p>
-      <form onsubmit="saveMedication(event,'${petId}')" class="space-y-4">
+      <form onsubmit="saveMedication(event,'${petId}')" class="space-y-3">
 
         <div>
           <label class="form-label">Medicamento *</label>
@@ -1777,11 +1777,11 @@ function openMedModal(petId) {
         <div>
           <label class="form-label">Frecuencia *</label>
           <div class="flex items-center gap-2">
-            <span class="text-sm text-gray-500 whitespace-nowrap">Cada</span>
-            <input id="m-freq-n" type="number" min="1" max="72" value="8" class="input-field w-20 text-center" oninput="updateMedPreview()" />
-            <select id="m-freq-unit" class="input-field" onchange="updateMedPreview()">
+            <span class="text-sm text-gray-400 font-medium whitespace-nowrap flex-shrink-0">Cada</span>
+            <input id="m-freq-n" type="number" min="1" max="72" value="8" class="input-field !w-16 text-center flex-shrink-0" oninput="updateMedPreview()" />
+            <select id="m-freq-unit" class="input-field flex-1" onchange="updateMedPreview()">
               <option value="horas">Horas</option>
-              <option value="minutos">Minutos</option>
+              <option value="dias">Días</option>
             </select>
           </div>
           <div id="m-freq-preview" class="text-xs text-brand-600 mt-1 font-medium"></div>
@@ -1792,11 +1792,13 @@ function openMedModal(petId) {
           <div id="m-schedules" class="flex flex-wrap gap-2"></div>
         </div>
 
-        <div class="grid grid-cols-3 gap-3">
-          <div>
-            <label class="form-label">Fecha inicio *</label>
-            <input id="m-start" type="date" required value="${today}" class="input-field" oninput="updateMedPreview()" />
-          </div>
+        <!-- Fecha inicio: ancho completo en mobile -->
+        <div>
+          <label class="form-label">Fecha inicio *</label>
+          <input id="m-start" type="date" required value="${today}" class="input-field" oninput="updateMedPreview()" />
+        </div>
+        <!-- Hora inicio + Días: 2 columnas -->
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="form-label">Hora inicio *</label>
             <input id="m-start-time" type="time" required value="08:00" class="input-field" oninput="updateMedPreview()" />
@@ -1819,10 +1821,10 @@ function openMedModal(petId) {
 
         <div>
           <label class="form-label">🔔 Recordatorio por dosis</label>
-          <div class="flex gap-2 mt-1 flex-wrap">
+          <div class="grid grid-cols-2 gap-2 mt-1">
             ${[{v:'exact',l:'Horario exacto'},{v:'15',l:'15 min antes'},{v:'30',l:'30 min antes'},{v:'60',l:'60 min antes'}].map(o => `
               <button type="button" onclick="selectMedReminder('${o.v}')" id="mr-${o.v}"
-                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300">
+                class="py-2.5 px-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300 text-center">
                 ${o.l}
               </button>`).join('')}
           </div>
@@ -1839,21 +1841,22 @@ function openMedModal(petId) {
           <div class="flex items-center justify-between mb-2">
             <label class="text-sm font-semibold text-gray-700">📦 Stock del medicamento <span class="text-gray-400 font-normal">(opcional)</span></label>
           </div>
-          <div class="grid grid-cols-3 gap-3">
+          <!-- Cantidad + Unidad en 2 cols, Caducidad en fila propia en mobile -->
+          <div class="grid grid-cols-2 gap-3">
             <div>
               <label class="form-label">Cantidad total</label>
               <input id="m-stock-total" type="number" min="0" placeholder="0" class="input-field" />
             </div>
             <div>
-              <label class="form-label">Unidad stock</label>
+              <label class="form-label">Unidad</label>
               <select id="m-stock-unit" class="input-field">
                 <option>Comprimidos</option><option>ml</option><option>mg</option><option>Ampollas</option><option>Frascos</option>
               </select>
             </div>
-            <div>
-              <label class="form-label">Fecha caducidad</label>
-              <input id="m-expiry" type="date" class="input-field" />
-            </div>
+          </div>
+          <div class="mt-3">
+            <label class="form-label">Fecha caducidad</label>
+            <input id="m-expiry" type="date" class="input-field" />
           </div>
         </div>
 
@@ -1868,11 +1871,14 @@ function openMedModal(petId) {
 
 function openHistoryModal(petId) {
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">Nuevo evento clínico</h3>
       <form onsubmit="saveHistory(event,'${petId}')" class="space-y-3">
+        <div>
+          <label class="form-label">Título *</label>
+          <input id="h-title" required placeholder="Ej: Esterilización" class="input-field" />
+        </div>
         <div class="grid grid-cols-2 gap-3">
-          <div class="col-span-2"><label class="form-label">Título *</label><input id="h-title" required placeholder="Ej: Esterilización" class="input-field" /></div>
           <div><label class="form-label">Tipo</label>
             <select id="h-type" class="input-field">
               <option>Cirugía</option><option>Esterilización</option><option>Procedimiento</option>
@@ -1880,10 +1886,18 @@ function openHistoryModal(petId) {
             </select>
           </div>
           <div><label class="form-label">Fecha *</label><input id="h-date" type="date" required class="input-field" /></div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div><label class="form-label">Médico</label><input id="h-doctor" placeholder="Dr. García" class="input-field" /></div>
           <div><label class="form-label">Clínica</label><input id="h-clinic" placeholder="Clínica Vet." class="input-field" /></div>
-          <div class="col-span-2"><label class="form-label">Costo (CLP)</label><input id="h-cost" type="number" min="0" placeholder="0" class="input-field" /></div>
-          <div class="col-span-2"><label class="form-label">Notas</label><textarea id="h-notes" rows="2" class="input-field resize-none" placeholder="Observaciones..."></textarea></div>
+        </div>
+        <div>
+          <label class="form-label">Costo (CLP)</label>
+          <input id="h-cost" type="number" min="0" placeholder="0" class="input-field" />
+        </div>
+        <div>
+          <label class="form-label">Notas</label>
+          <textarea id="h-notes" rows="2" class="input-field resize-none" placeholder="Observaciones..."></textarea>
         </div>
         <div>
           <label class="form-label">📎 Adjuntar archivos <span class="text-gray-400 font-normal">(imágenes, PDFs, resultados)</span></label>
@@ -1907,7 +1921,7 @@ function openHistoryModal(petId) {
 function openEventModal(dateStr = '') {
   const pets = state.pets;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">Nuevo evento</h3>
       <form onsubmit="saveEvent(event)" class="space-y-3">
         <div><label class="form-label">Título *</label><input id="ev-title" required placeholder="Ej: Consulta anual" class="input-field" /></div>
@@ -1938,7 +1952,7 @@ function openEventModal(dateStr = '') {
 function openExpenseModal() {
   const pets = state.pets;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">Registrar gasto</h3>
       <form onsubmit="saveExpense(event)" class="space-y-3">
         <div><label class="form-label">Descripción *</label><input id="ex-desc" required placeholder="Ej: Consulta veterinaria" class="input-field" /></div>
@@ -1972,7 +1986,7 @@ function openEditPetModal(petId) {
   const p = state.pets.find(x => x.id === petId);
   if (!p) return;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">Editar mascota</h3>
       <div class="space-y-3">
         <div><label class="form-label">Nombre</label><input id="ep-name" value="${p.name||''}" class="input-field" /></div>
@@ -2129,7 +2143,7 @@ function openDeletePetWithCode(petId) {
   const hasTwoTutors = pet.tutor2?.name;
   const email = state.user?.email || '';
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <div class="text-center mb-4">
         <div class="text-5xl mb-2">🗑️</div>
         <h3 class="text-lg font-bold text-gray-900">Eliminar a ${pet.name}</h3>
@@ -2956,7 +2970,7 @@ function openEditVaccineModal(petId, vaccineId) {
   if (!v) return;
   const vaccines = VACCINES_BY_SPECIES[pet.species] || VACCINES_BY_SPECIES['Otro'];
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar Vacuna</h3>
       <form onsubmit="saveEditVaccine(event,'${petId}','${vaccineId}')" class="space-y-3">
         <div>
@@ -3005,7 +3019,7 @@ function openEditDewormModal(petId, dewormId) {
   const d = pet?.deworming?.find(x => x.id === dewormId);
   if (!d) return;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar Desparasitación</h3>
       <form onsubmit="saveEditDeworming(event,'${petId}','${dewormId}')" class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
@@ -3051,7 +3065,7 @@ function openEditMedModal(petId, medId) {
   const m = pet?.medications?.find(x => x.id === medId);
   if (!m) return;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar Tratamiento</h3>
       <form onsubmit="saveEditMedication(event,'${petId}','${medId}')" class="space-y-3">
         <div><label class="form-label">Medicamento *</label><input id="em-name" required value="${m.name||''}" class="input-field" /></div>
@@ -3107,7 +3121,7 @@ function openEditHistoryModal(petId, histId) {
   const h = pet?.clinicalHistory?.find(x => x.id === histId);
   if (!h) return;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar evento clínico</h3>
       <form onsubmit="saveEditHistory(event,'${petId}','${histId}')" class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
@@ -3194,7 +3208,7 @@ function openInviteTutor2Modal(petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   openModal(`
-    <div class="modal-box p-6">
+    <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-2">👥 Invitar Segundo Tutor</h3>
       <p class="text-sm text-gray-500 mb-4">El invitado recibirá un correo para crear su cuenta y acceder a <strong>${pet.name}</strong>.</p>
       <form onsubmit="sendTutor2Invite(event,'${petId}')" class="space-y-3">
