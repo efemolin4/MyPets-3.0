@@ -1794,7 +1794,7 @@ function openMedModal(petId) {
 
         <div>
           <label class="form-label">Fecha inicio *</label>
-          <input id="m-start" type="date" required value="${today}" class="input-field" oninput="updateMedPreview()" />
+          <input id="m-start" type="date" required value="${today}" class="input-field text-center" oninput="updateMedPreview()" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
