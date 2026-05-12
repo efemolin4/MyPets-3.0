@@ -1804,7 +1804,7 @@ function openMedModal(petId) {
             <input id="m-start-time" type="time" required value="08:00" class="input-field" oninput="updateMedPreview()" />
           </div>
           <div>
-            <label class="form-label">Días tratamiento</label>
+            <label class="form-label">N° días</label>
             <input id="m-days" type="number" min="1" placeholder="7" class="input-field" oninput="updateMedPreview()" />
           </div>
         </div>
