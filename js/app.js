@@ -1424,7 +1424,6 @@ function openMedModal(petId) {
               <option value="ml">ml</option>
               <option value="Comprimido(s)">Comprimido(s)</option>
               <option value="Gotas">Gotas</option>
-              <option value="UI">UI</option>
             </select>
           </div>
         </div>
