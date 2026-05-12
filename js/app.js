@@ -440,8 +440,8 @@ function viewPets() {
       : `<div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger">
            ${pets.map(p => `
              <div class="bg-white rounded-2xl shadow-sm p-5 card-hover animate-fade-in relative flex flex-col">
-               <!-- Botones top-left -->
-               <div class="absolute top-3 left-3 flex gap-1.5 z-10">
+               <!-- Botones top-right -->
+               <div class="absolute top-3 right-3 flex gap-1.5 z-10">
                  <button onclick="event.stopPropagation();openEditPetModal('${p.id}')"
                    title="Editar"
                    class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-brand-50 text-gray-400 hover:text-brand-600 border border-gray-200 flex items-center justify-center transition-all">
