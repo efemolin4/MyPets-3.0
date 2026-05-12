@@ -1792,20 +1792,19 @@ function openMedModal(petId) {
           <div id="m-schedules" class="flex flex-wrap gap-2"></div>
         </div>
 
-        <!-- Fecha inicio: ancho completo en mobile -->
-        <div>
-          <label class="form-label">Fecha inicio *</label>
-          <input id="m-start" type="date" required value="${today}" class="input-field" oninput="updateMedPreview()" />
-        </div>
         <div class="grid grid-cols-2 gap-3">
+          <div class="min-w-0">
+            <label class="form-label">Fecha inicio *</label>
+            <input id="m-start" type="date" required value="${today}" class="input-field" style="min-width:0;width:100%" oninput="updateMedPreview()" />
+          </div>
           <div class="min-w-0">
             <label class="form-label">Hora inicio *</label>
             <input id="m-start-time" type="time" required value="08:00" class="input-field" style="min-width:0;width:100%" oninput="updateMedPreview()" />
           </div>
-          <div class="min-w-0">
-            <label class="form-label">N° días</label>
-            <input id="m-days" type="number" min="1" placeholder="7" class="input-field" style="min-width:0;width:100%" oninput="updateMedPreview()" />
-          </div>
+        </div>
+        <div>
+          <label class="form-label">N° días tratamiento</label>
+          <input id="m-days" type="number" min="1" placeholder="Ej: 7 (dejar vacío = indefinido)" class="input-field" oninput="updateMedPreview()" />
         </div>
 
         <div id="m-enddate-box" class="hidden">
