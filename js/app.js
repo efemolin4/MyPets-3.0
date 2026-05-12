@@ -16,14 +16,14 @@ const VACCINES_BY_SPECIES = {
 
 // ---- PERIODICIDADES ----
 const PERIODICITY_OPTIONS = [
-  { label: 'Sin periodicidad',     months: 0  },
-  { label: 'Mensual (1 mes)',      months: 1  },
-  { label: 'Bimestral (2 meses)', months: 2  },
-  { label: 'Trimestral (3 meses)',months: 3  },
-  { label: 'Semestral (6 meses)', months: 6  },
-  { label: 'Anual (12 meses)',     months: 12 },
-  { label: 'Cada 2 años',         months: 24 },
-  { label: 'Cada 3 años',         months: 36 },
+  { label: 'Sin periodicidad',          months: 0,  days: 0    },
+  { label: '1 mes (30 días)',           months: 1,  days: 30   },
+  { label: 'Bimestral (60 días)',       months: 2,  days: 60   },
+  { label: 'Trimestral (90 días)',      months: 3,  days: 90   },
+  { label: 'Semestral (180 días)',      months: 6,  days: 180  },
+  { label: 'Anual (365 días)',          months: 12, days: 365  },
+  { label: 'Cada 2 años (730 días)',    months: 24, days: 730  },
+  { label: 'Cada 3 años (1095 días)',   months: 36, days: 1095 },
 ];
 
 // ---- RAZAS POR ESPECIE ----
@@ -1182,23 +1182,32 @@ function openDewormModal(petId) {
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="form-label">Tipo</label>
-            <select id="d-type" class="input-field"><option>Interna</option><option>Externa</option><option>Ambas</option></select>
+            <select id="d-type" class="input-field">
+              <option>Interna</option><option>Externa</option><option>Ambas</option>
+            </select>
           </div>
           <div>
-            <label class="form-label">Formato</label>
-            <select id="d-format" onchange="updateDoseUnit()" class="input-field">
+            <label class="form-label">Formato *</label>
+            <select id="d-format" onchange="updateDoseSection()" class="input-field">
+              <option value="">— Selecciona formato —</option>
               <option>Comprimido</option><option>Pipeta</option><option>Collar</option>
               <option>Spray</option><option>Jarabe</option><option>Inyección</option>
             </select>
           </div>
-          <div>
-            <label class="form-label">Dosis</label>
-            <input id="d-dose" placeholder="1" class="input-field" />
+        </div>
+
+        <div id="d-dose-section" class="hidden space-y-2">
+          <label class="form-label">Dosis</label>
+          <div class="flex gap-2 items-center">
+            <div id="d-dose-input-wrap" class="flex-1"></div>
+            <div id="d-unit-badge" class="px-3 py-2 bg-teal-50 text-teal-700 rounded-xl text-sm font-semibold whitespace-nowrap"></div>
           </div>
-          <div>
-            <label class="form-label">Unidad</label>
-            <input id="d-unit" placeholder="Comprimidos" class="input-field" />
+          <div id="d-dose-preview" class="hidden bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-700">
+            📋 Se registrará: <span id="d-dose-preview-text" class="font-semibold text-teal-700"></span>
           </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="form-label">Fecha de aplicación *</label>
             <input id="d-date" type="date" required class="input-field" onchange="updateNextDatePreview('d')" />
@@ -1210,10 +1219,12 @@ function openDewormModal(petId) {
             </select>
           </div>
         </div>
+
         <div id="d-next-preview" class="hidden bg-teal-50 border border-teal-100 rounded-xl px-4 py-3 text-sm">
           <span class="text-gray-500">Próxima aplicación:</span>
           <span id="d-next-date" class="font-semibold text-teal-700 ml-1"></span>
         </div>
+
         <div>
           <label class="form-label">¿Cuándo recibir la alerta?</label>
           <div class="flex gap-2 mt-1 flex-wrap">
@@ -1229,6 +1240,12 @@ function openDewormModal(petId) {
             <input id="d-alert-days" type="number" min="1" max="365" placeholder="Ej: 15" class="input-field" />
           </div>
         </div>
+
+        <div>
+          <label class="form-label">Costo (CLP)</label>
+          <input id="d-cost" type="number" min="0" placeholder="0" class="input-field" />
+        </div>
+
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
           <button type="submit" class="btn-primary flex-1">Guardar</button>
@@ -1538,11 +1555,18 @@ function saveDeworming(e, petId) {
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
   const date = g('d-date'), period = g('d-period');
-  const d = { id: genId(), product: g('d-product'), type: g('d-type'), format: g('d-format'),
-    dose: g('d-dose'), unit: g('d-unit'), date, nextDate: period ? addMonths(date, parseInt(period)) : '',
-    alertType: g('d-alert'), alertDays: g('d-alert-days') };
+  const fmt = g('d-format');
+  const unitMap = { Comprimido:'Comprimido(s)', Pipeta:'ML', Collar:'Unidad(es)', Spray:'ML', Jarabe:'ML', Inyección:'ML' };
+  const d = { id: genId(), product: g('d-product'), type: g('d-type'), format: fmt,
+    dose: g('d-dose'), unit: unitMap[fmt] || '', date,
+    nextDate: period ? addMonths(date, parseInt(period)) : '',
+    alertType: g('d-alert'), alertDays: g('d-alert-days'), cost: g('d-cost') };
   pet.deworming = pet.deworming || [];
   pet.deworming.push(d);
+  if (d.cost) {
+    state.expenses.push({ id: genId(), description: `Desparasitación ${d.product} - ${pet.name}`,
+      amount: d.cost, date, category: 'Veterinaria', pet: pet.name });
+  }
   saveState(); closeModal(); render();
   showToast('Desparasitación registrada ✓', 'success');
 }
@@ -1746,12 +1770,52 @@ function updateBreedOptions(species) {
   select.innerHTML = breeds.map(b => `<option ${b==='Mestizo'?'selected':''}>${b}</option>`).join('');
 }
 
-function updateDoseUnit() {
+function updateDoseSection() {
   const fmt = document.getElementById('d-format')?.value;
-  const unitMap = { Comprimido:'Comprimidos', Pipeta:'Pipetas', Collar:'Unidades', Spray:'ML', Jarabe:'ML', Inyección:'ML' };
-  const unitEl = document.getElementById('d-unit');
-  if (unitEl) unitEl.value = unitMap[fmt] || 'Unidades';
+  const section = document.getElementById('d-dose-section');
+  const wrap = document.getElementById('d-dose-input-wrap');
+  const badge = document.getElementById('d-unit-badge');
+  if (!fmt || !section) return;
+  section.classList.remove('hidden');
+
+  if (fmt === 'Comprimido') {
+    badge.textContent = 'Comprimido(s)';
+    wrap.innerHTML = `
+      <select id="d-dose" class="input-field" onchange="updateDosePreview()">
+        <option value="">— Selecciona dosis —</option>
+        <option value="1/4">1/4</option>
+        <option value="1/3">1/3</option>
+        <option value="1/2">1/2</option>
+        <option value="1">1</option>
+        <option value="2">2</option>
+        <option value="3">3</option>
+      </select>`;
+  } else {
+    const unitMap = { Pipeta:'ML', Collar:'Unidad', Spray:'ML', Jarabe:'ML', Inyección:'ML' };
+    badge.textContent = unitMap[fmt] || 'Unidades';
+    wrap.innerHTML = `<input id="d-dose" type="number" min="0" step="0.1" placeholder="0.0"
+      class="input-field" oninput="updateDosePreview()" />`;
+  }
+  updateDosePreview();
 }
+
+function updateDosePreview() {
+  const fmt = document.getElementById('d-format')?.value;
+  const dose = document.getElementById('d-dose')?.value;
+  const preview = document.getElementById('d-dose-preview');
+  const previewText = document.getElementById('d-dose-preview-text');
+  if (!preview || !previewText) return;
+  if (fmt && dose) {
+    const unitMap = { Comprimido:'Comprimido(s)', Pipeta:'ML', Collar:'Unidad(es)', Spray:'ML', Jarabe:'ML', Inyección:'ML' };
+    previewText.textContent = `${dose} ${unitMap[fmt] || ''}`;
+    preview.classList.remove('hidden');
+  } else {
+    preview.classList.add('hidden');
+  }
+}
+
+// mantener compatibilidad con llamadas antiguas
+function updateDoseUnit() { updateDoseSection(); }
 
 // ---- CSS CLASSES HELPER (inject into head) ----
 function injectStyles() {
