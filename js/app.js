@@ -1798,13 +1798,13 @@ function openMedModal(petId) {
           <input id="m-start" type="date" required value="${today}" class="input-field" oninput="updateMedPreview()" />
         </div>
         <div class="grid grid-cols-2 gap-3">
-          <div>
+          <div class="min-w-0">
             <label class="form-label">Hora inicio *</label>
-            <input id="m-start-time" type="time" required value="08:00" class="input-field" oninput="updateMedPreview()" />
+            <input id="m-start-time" type="time" required value="08:00" class="input-field" style="min-width:0;width:100%" oninput="updateMedPreview()" />
           </div>
-          <div>
+          <div class="min-w-0">
             <label class="form-label">N° días</label>
-            <input id="m-days" type="number" min="1" placeholder="7" class="input-field" oninput="updateMedPreview()" />
+            <input id="m-days" type="number" min="1" placeholder="7" class="input-field" style="min-width:0;width:100%" oninput="updateMedPreview()" />
           </div>
         </div>
 
