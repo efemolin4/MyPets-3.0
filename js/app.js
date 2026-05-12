@@ -1327,6 +1327,28 @@ function openMedModal(petId) {
           <div id="m-enddate-text" class="text-base font-bold text-brand-600"></div>
         </div>
 
+        <div>
+          <label class="form-label">Costo (CLP)</label>
+          <input id="m-cost" type="number" min="0" placeholder="0" class="input-field" />
+        </div>
+
+        <div>
+          <label class="form-label">🔔 Recordatorio por dosis</label>
+          <div class="flex gap-2 mt-1 flex-wrap">
+            ${[{v:'exact',l:'Horario exacto'},{v:'15',l:'15 min antes'},{v:'30',l:'30 min antes'},{v:'60',l:'60 min antes'}].map(o => `
+              <button type="button" onclick="selectMedReminder('${o.v}')" id="mr-${o.v}"
+                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300">
+                ${o.l}
+              </button>`).join('')}
+          </div>
+          <input type="hidden" id="m-reminder" value="exact" />
+        </div>
+
+        <div class="flex items-center gap-2">
+          <input type="checkbox" id="m-active" checked class="rounded text-brand-500" />
+          <label for="m-active" class="text-sm text-gray-700 font-medium">Tratamiento activo</label>
+        </div>
+
         <hr class="border-gray-100" />
         <div>
           <div class="flex items-center justify-between mb-2">
@@ -1348,28 +1370,6 @@ function openMedModal(petId) {
               <input id="m-expiry" type="date" class="input-field" />
             </div>
           </div>
-        </div>
-
-        <div>
-          <label class="form-label">Costo (CLP)</label>
-          <input id="m-cost" type="number" min="0" placeholder="0" class="input-field" />
-        </div>
-
-        <div>
-          <label class="form-label">🔔 Recordatorio por dosis</label>
-          <div class="flex gap-2 mt-1 flex-wrap">
-            ${[{v:'exact',l:'Horario exacto'},{v:'15',l:'15 min antes'},{v:'30',l:'30 min antes'},{v:'60',l:'60 min antes'}].map(o => `
-              <button type="button" onclick="selectMedReminder('${o.v}')" id="mr-${o.v}"
-                class="px-3 py-2 rounded-xl border-2 text-sm font-medium transition-all border-gray-200 text-gray-500 hover:border-brand-300">
-                ${o.l}
-              </button>`).join('')}
-          </div>
-          <input type="hidden" id="m-reminder" value="exact" />
-        </div>
-
-        <div class="flex items-center gap-2">
-          <input type="checkbox" id="m-active" checked class="rounded text-brand-500" />
-          <label for="m-active" class="text-sm text-gray-700 font-medium">Tratamiento activo</label>
         </div>
 
         <div class="flex gap-3 pt-1">
