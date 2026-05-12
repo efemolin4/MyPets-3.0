@@ -995,56 +995,142 @@ function viewCalendar() {
 
 // ---- VISTA: FINANZAS ----
 function viewFinance() {
-  const expenses = state.expenses || [];
+  const allExpenses = state.expenses || [];
   const pets = state.pets;
   const today = new Date();
   const thisMonth = `${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}`;
-  const monthExp = expenses.filter(e => e.date?.startsWith(thisMonth));
-  const total = expenses.reduce((s,e)=>s+Number(e.amount||0), 0);
-  const monthTotal = monthExp.reduce((s,e)=>s+Number(e.amount||0), 0);
 
-  // Chart data: last 6 months
-  const months6 = Array.from({length:6}, (_,i) => {
-    const d = new Date(today.getFullYear(), today.getMonth()-5+i, 1);
-    return { label: d.toLocaleDateString('es-CL',{month:'short'}), key: `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}` };
-  });
+  // Filtros activos
+  const petFilter  = state.finPet    || '';
+  const period     = state.finPeriod || 'mensual';
+  const viewMode   = state.finView   || 'listado';
 
-  const catColors = { Veterinaria:'#8b5cf6', Medicamentos:'#06b6d4', Alimentación:'#f59e0b', Peluquería:'#ec4899', Hotel:'#10b981', Otro:'#6b7280' };
+  // Gastos filtrados por mascota
+  const expenses = petFilter ? allExpenses.filter(e => e.pet === petFilter) : allExpenses;
+
+  const total      = expenses.reduce((s,e) => s + Number(e.amount||0), 0);
+  const monthTotal = expenses.filter(e => e.date?.startsWith(thisMonth)).reduce((s,e) => s + Number(e.amount||0), 0);
+  const catColors  = { Veterinaria:'#8b5cf6', Medicamentos:'#06b6d4', Alimentación:'#f59e0b', Peluquería:'#ec4899', Hotel:'#10b981', Otro:'#6b7280' };
+
+  // Construir períodos para el gráfico
+  function buildPeriods() {
+    if (period === 'mensual') {
+      return Array.from({length:6}, (_,i) => {
+        const d = new Date(today.getFullYear(), today.getMonth()-5+i, 1);
+        const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}`;
+        return { label: d.toLocaleDateString('es-CL',{month:'short', year:'2-digit'}), key, match: e => e.date?.startsWith(key) };
+      });
+    }
+    if (period === 'trimestral') {
+      return Array.from({length:4}, (_,i) => {
+        const d = new Date(today.getFullYear(), today.getMonth() - (3-i)*3, 1);
+        const q = Math.floor(d.getMonth()/3)+1;
+        const months = [0,1,2].map(m => `${d.getFullYear()}-${String(d.getMonth()+m+1).padStart(2,'0')}`);
+        return { label: `Q${q} ${d.getFullYear()}`, match: e => months.some(m => e.date?.startsWith(m)) };
+      });
+    }
+    if (period === 'semestral') {
+      return Array.from({length:4}, (_,i) => {
+        const offset = (3-i)*6;
+        const d = new Date(today.getFullYear(), today.getMonth()-offset, 1);
+        const sem = d.getMonth() < 6 ? 1 : 2;
+        const baseMonth = sem === 1 ? 0 : 6;
+        const months = Array.from({length:6}, (_,m) => `${d.getFullYear()}-${String(baseMonth+m+1).padStart(2,'0')}`);
+        return { label: `S${sem} ${d.getFullYear()}`, match: e => months.some(m => e.date?.startsWith(m)) };
+      });
+    }
+    if (period === 'anual') {
+      return Array.from({length:4}, (_,i) => {
+        const y = today.getFullYear() - (3-i);
+        return { label: `${y}`, match: e => e.date?.startsWith(`${y}`) };
+      });
+    }
+    return [];
+  }
+
+  const periods = buildPeriods();
 
   setTimeout(() => {
     const ctx = document.getElementById('expenses-chart');
-    if (ctx) {
-      if (chartInstance) chartInstance.destroy();
+    if (!ctx) return;
+    if (chartInstance) chartInstance.destroy();
+
+    if (petFilter) {
+      // Gráfico de una mascota: una sola serie
       chartInstance = new Chart(ctx, {
         type: 'bar',
         data: {
-          labels: months6.map(m => m.label),
-          datasets: [{
-            label: 'Gastos (CLP)',
-            data: months6.map(m => expenses.filter(e=>e.date?.startsWith(m.key)).reduce((s,e)=>s+Number(e.amount||0),0)),
-            backgroundColor: '#8b5cf6', borderRadius: 8,
-          }]
+          labels: periods.map(p => p.label),
+          datasets: [{ label: petFilter, data: periods.map(p => expenses.filter(p.match).reduce((s,e)=>s+Number(e.amount||0),0)),
+            backgroundColor: '#8b5cf6', borderRadius: 8 }]
         },
-        options: { responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ ticks:{callback:v=>'$'+v.toLocaleString('es-CL')} } } }
+        options: { responsive:true, plugins:{ legend:{display:false} }, scales:{ y:{ ticks:{ callback: v=>'$'+v.toLocaleString('es-CL') } } } }
+      });
+    } else {
+      // Gráfico con todas las mascotas: una serie por mascota + colores
+      const petColors = ['#8b5cf6','#06b6d4','#f59e0b','#ec4899','#10b981','#ef4444','#6366f1','#84cc16'];
+      const petsWithExp = pets.filter(p => allExpenses.some(e => e.pet === p.name));
+      const datasets = petsWithExp.length > 0
+        ? petsWithExp.map((p, i) => ({
+            label: p.name,
+            data: periods.map(pr => allExpenses.filter(e => e.pet===p.name && pr.match(e)).reduce((s,e)=>s+Number(e.amount||0),0)),
+            backgroundColor: petColors[i % petColors.length], borderRadius: 6,
+          }))
+        : [{ label: 'Todos', data: periods.map(p => expenses.filter(p.match).reduce((s,e)=>s+Number(e.amount||0),0)),
+            backgroundColor: '#8b5cf6', borderRadius: 8 }];
+      chartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: { labels: periods.map(p => p.label), datasets },
+        options: { responsive:true, plugins:{ legend:{ display: petsWithExp.length > 1 } },
+          scales:{ x:{ stacked: false }, y:{ ticks:{ callback: v=>'$'+v.toLocaleString('es-CL') } } } }
       });
     }
   }, 100);
 
   return appShell(`
-    ${pageHeader('Finanzas', 'Control de gastos por mascota',
-      `<button onclick="openExpenseModal()" class="btn-primary">+ Gasto</button>`)}
+    ${pageHeader('Finanzas 💰', 'Control de gastos por mascota',
+      `<button onclick="openExpenseModal()" class="btn-primary flex items-center gap-1">+ Gasto</button>`)}
 
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6 stagger">
-      ${statCard('💰','Total gastos', fmtCLP(total), 'brand')}
+    <!-- Filtros -->
+    <div class="flex flex-wrap gap-3 mb-6 bg-white rounded-2xl shadow-sm p-4 items-center">
+      <div class="flex items-center gap-2">
+        <span class="text-sm text-gray-500 font-medium">Mascota:</span>
+        <select onchange="state.finPet=this.value;render()" class="input-field text-sm py-1.5 w-auto">
+          <option value="">Todas las mascotas</option>
+          ${pets.map(p=>`<option ${petFilter===p.name?'selected':''}>${p.name}</option>`).join('')}
+        </select>
+      </div>
+      <div class="flex rounded-xl overflow-hidden border border-gray-200 text-sm font-medium">
+        ${['mensual','trimestral','semestral','anual'].map(p=>`
+          <button onclick="state.finPeriod='${p}';render()"
+            class="px-3 py-1.5 transition-colors ${period===p?'bg-brand-600 text-white':'text-gray-500 hover:bg-gray-50'}">
+            ${p[0].toUpperCase()+p.slice(1)}
+          </button>`).join('')}
+      </div>
+      <div class="ml-auto flex rounded-xl overflow-hidden border border-gray-200 text-sm font-medium">
+        ${['listado','grafico'].map(m=>`
+          <button onclick="state.finView='${m}';render()"
+            class="px-3 py-1.5 transition-colors ${viewMode===m?'bg-brand-600 text-white':'text-gray-500 hover:bg-gray-50'}">
+            ${m==='listado'?'☰ Listado':'📊 Gráfico'}
+          </button>`).join('')}
+      </div>
+    </div>
+
+    <!-- Widgets -->
+    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
+      ${statCard('💰','Total '+(petFilter||'todas'), fmtCLP(total), 'brand')}
       ${statCard('📅','Este mes', fmtCLP(monthTotal), 'teal')}
       ${statCard('🧾','Registros', expenses.length, 'amber')}
       ${statCard('🐾','Mascotas', pets.length, 'brand')}
     </div>
 
-    <div class="grid md:grid-cols-2 gap-6 mb-6">
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <h3 class="font-semibold text-gray-700 mb-4">Últimos 6 meses</h3>
-        <canvas id="expenses-chart" height="200"></canvas>
+    ${viewMode === 'grafico' ? `
+    <!-- GRÁFICO -->
+    <div class="grid md:grid-cols-3 gap-6 mb-6">
+      <div class="md:col-span-2 bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="font-semibold text-gray-700 mb-1">Gastos ${period} ${petFilter ? '· '+petFilter : '· Todas las mascotas'}</h3>
+        <p class="text-xs text-gray-400 mb-4">${{mensual:'Últimos 6 meses',trimestral:'Últimos 4 trimestres',semestral:'Últimos 4 semestres',anual:'Últimos 4 años'}[period]}</p>
+        <canvas id="expenses-chart" height="220"></canvas>
       </div>
       <div class="bg-white rounded-2xl shadow-sm p-5">
         <h3 class="font-semibold text-gray-700 mb-4">Por categoría</h3>
@@ -1052,48 +1138,82 @@ function viewFinance() {
           const catTotal = expenses.filter(e=>e.category===cat).reduce((s,e)=>s+Number(e.amount||0),0);
           const pct = total > 0 ? Math.round(catTotal/total*100) : 0;
           if (!catTotal) return '';
-          return `
-            <div class="mb-3">
-              <div class="flex justify-between text-sm mb-1">
-                <span class="text-gray-600">${cat}</span>
-                <span class="font-medium text-gray-800">${fmtCLP(catTotal)} (${pct}%)</span>
+          return `<div class="mb-3">
+            <div class="flex justify-between text-xs mb-1">
+              <span class="text-gray-600">${cat}</span>
+              <span class="font-semibold text-gray-800">${fmtCLP(catTotal)}</span>
+            </div>
+            <div class="w-full bg-gray-100 rounded-full h-2">
+              <div class="h-2 rounded-full" style="width:${pct}%;background:${catColors[cat]}"></div>
+            </div>
+          </div>`;
+        }).join('')}
+        ${total===0?'<p class="text-xs text-gray-400 text-center py-4">Sin datos</p>':''}
+        ${pets.length > 1 && !petFilter ? `
+        <div class="mt-4 pt-4 border-t border-gray-100">
+          <div class="text-xs font-semibold text-gray-400 mb-2">Por mascota</div>
+          ${pets.map(p => {
+            const pt = allExpenses.filter(e=>e.pet===p.name).reduce((s,e)=>s+Number(e.amount||0),0);
+            if (!pt) return '';
+            const pct = total>0?Math.round(pt/total*100):0;
+            return `<div class="mb-2">
+              <div class="flex justify-between text-xs mb-1">
+                <span class="text-gray-600">${speciesEmoji(p.species)} ${p.name}</span>
+                <span class="font-semibold">${fmtCLP(pt)}</span>
               </div>
-              <div class="w-full bg-gray-100 rounded-full h-2">
-                <div class="h-2 rounded-full" style="width:${pct}%;background:${catColors[cat]}"></div>
+              <div class="w-full bg-gray-100 rounded-full h-1.5">
+                <div class="h-1.5 rounded-full bg-brand-400" style="width:${pct}%"></div>
               </div>
             </div>`;
-        }).join('')}
-        ${total === 0 ? '<p class="text-sm text-gray-400 text-center py-4">Sin gastos registrados</p>' : ''}
+          }).join('')}
+        </div>` : ''}
       </div>
-    </div>
-
+    </div>` : `
+    <!-- LISTADO -->
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="font-semibold text-gray-700">Historial de gastos</h3>
+        <h3 class="font-semibold text-gray-700">Historial de gastos ${petFilter?'· '+petFilter:''}</h3>
+        <span class="text-sm text-gray-400">${expenses.length} registro${expenses.length!==1?'s':''}</span>
       </div>
       ${expenses.length === 0
         ? emptyState('💸','Sin gastos registrados','Comienza a registrar los gastos de tus mascotas')
-        : `<div class="overflow-x-auto">
-             <table class="w-full text-sm">
-               <thead><tr class="text-left text-gray-400 text-xs border-b border-gray-100">
-                 <th class="pb-2 font-medium">Fecha</th><th class="pb-2 font-medium">Descripción</th>
-                 <th class="pb-2 font-medium">Mascota</th><th class="pb-2 font-medium">Categoría</th>
-                 <th class="pb-2 font-medium text-right">Monto</th><th class="pb-2"></th>
-               </tr></thead>
+        : `<div class="overflow-x-auto -mx-5 px-5">
+             <table class="w-full text-sm min-w-[640px]">
+               <thead>
+                 <tr class="text-left text-xs text-gray-400 border-b border-gray-100">
+                   <th class="pb-3 font-semibold">Fecha</th>
+                   <th class="pb-3 font-semibold">Descripción</th>
+                   <th class="pb-3 font-semibold">Mascota</th>
+                   <th class="pb-3 font-semibold">Categoría</th>
+                   <th class="pb-3 font-semibold">Tutor</th>
+                   <th class="pb-3 font-semibold text-right">Monto</th>
+                   <th class="pb-3"></th>
+                 </tr>
+               </thead>
                <tbody>
-                 ${[...expenses].reverse().map(e => `
-                   <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                     <td class="py-2 text-gray-400">${formatDate(e.date)}</td>
-                     <td class="py-2 font-medium text-gray-800">${e.description}</td>
-                     <td class="py-2 text-gray-500">${e.pet||'—'}</td>
-                     <td class="py-2"><span class="badge bg-brand-50 text-brand-700">${e.category||'—'}</span></td>
-                     <td class="py-2 text-right font-semibold text-gray-900">${fmtCLP(e.amount)}</td>
-                     <td class="py-2 text-right"><button onclick="deleteExpense('${e.id}')" class="text-red-400 hover:text-red-600">✕</button></td>
+                 ${[...expenses].sort((a,b)=>b.date>a.date?1:-1).map(e => `
+                   <tr class="border-b border-gray-50 hover:bg-gray-50 transition-colors group">
+                     <td class="py-3 text-gray-400 whitespace-nowrap">${formatDate(e.date)}</td>
+                     <td class="py-3 font-medium text-gray-800 max-w-[180px] truncate">${e.description}</td>
+                     <td class="py-3 text-gray-500">${e.pet ? `<span class="inline-flex items-center gap-1">${speciesEmoji(pets.find(p=>p.name===e.pet)?.species||'')} ${e.pet}</span>` : '<span class="text-gray-300">—</span>'}</td>
+                     <td class="py-3"><span class="badge" style="background:${catColors[e.category]+'22'};color:${catColors[e.category]}">${e.category||'—'}</span></td>
+                     <td class="py-3 text-gray-500 text-xs">${e.tutor||state.user?.name||'—'}</td>
+                     <td class="py-3 text-right font-bold text-gray-900 whitespace-nowrap">${fmtCLP(e.amount)}</td>
+                     <td class="py-3 text-right opacity-0 group-hover:opacity-100 transition-opacity">
+                       <button onclick="deleteExpense('${e.id}')" class="text-red-400 hover:text-red-600 p-1">✕</button>
+                     </td>
                    </tr>`).join('')}
                </tbody>
+               <tfoot>
+                 <tr class="border-t-2 border-gray-200">
+                   <td colspan="5" class="pt-3 text-sm font-semibold text-gray-500">Total</td>
+                   <td class="pt-3 text-right font-bold text-brand-700 text-base">${fmtCLP(total)}</td>
+                   <td></td>
+                 </tr>
+               </tfoot>
              </table>
            </div>`}
-    </div>
+    </div>`}
   `);
 }
 
@@ -1738,7 +1858,7 @@ function saveExpense(e) {
   e.preventDefault();
   const g = id => document.getElementById(id)?.value;
   state.expenses = state.expenses || [];
-  state.expenses.push({ id: genId(), description: g('ex-desc'), amount: g('ex-amount'), date: g('ex-date'), category: g('ex-cat'), pet: g('ex-pet') });
+  state.expenses.push({ id: genId(), description: g('ex-desc'), amount: g('ex-amount'), date: g('ex-date'), category: g('ex-cat'), pet: g('ex-pet'), tutor: state.user?.name || '' });
   saveState(); closeModal(); render();
   showToast('Gasto registrado ✓', 'success');
 }
