@@ -1794,7 +1794,7 @@ function openMedModal(petId) {
 
         <div class="overflow-hidden">
           <label class="form-label">Fecha inicio *</label>
-          <input id="m-start" type="date" required value="${today}" class="input-field text-center" style="text-align:center" oninput="updateMedPreview()" />
+          <input id="m-start" type="date" required value="${today}" class="input-field text-center" style="min-width:0;max-width:100%;width:100%;box-sizing:border-box;text-align:center" oninput="updateMedPreview()" />
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -2637,7 +2637,7 @@ function injectStyles() {
     .page-header-action button,.page-header-action a{white-space:nowrap}
     /* ---- Mobile overrides ---- */
     input[type="date"]::-webkit-date-and-time-value{text-align:center;display:block;width:100%}
-    input[type="date"]{text-align:center;text-align-last:center}
+    input[type="date"]{text-align:center;text-align-last:center;min-width:0!important;max-width:100%!important;width:100%!important;box-sizing:border-box!important}
     @media(max-width:640px){
       .input-field{font-size:16px}
       /* Modal slides up from bottom on mobile */
