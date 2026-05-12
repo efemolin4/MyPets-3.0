@@ -439,20 +439,40 @@ function viewPets() {
       ? emptyState('🐾', 'Aún no tienes mascotas', 'Registra tu primera mascota para comenzar', '+ Agregar mascota', "navigate('addPet')")
       : `<div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger">
            ${pets.map(p => `
-             <div onclick="openPet('${p.id}')" class="bg-white rounded-2xl shadow-sm p-5 cursor-pointer card-hover animate-fade-in">
-               <div class="flex flex-col items-center text-center">
+             <div class="bg-white rounded-2xl shadow-sm p-5 card-hover animate-fade-in relative flex flex-col">
+               <!-- Botones top-left -->
+               <div class="absolute top-3 left-3 flex gap-1.5 z-10">
+                 <button onclick="event.stopPropagation();openEditPetModal('${p.id}')"
+                   title="Editar"
+                   class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-brand-50 text-gray-400 hover:text-brand-600 border border-gray-200 flex items-center justify-center transition-all">
+                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                 </button>
+                 <button onclick="event.stopPropagation();openDeletePetWithCode('${p.id}')"
+                   title="Eliminar"
+                   class="w-8 h-8 rounded-lg bg-gray-50 hover:bg-red-50 text-gray-400 hover:text-red-500 border border-gray-200 flex items-center justify-center transition-all">
+                   <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                 </button>
+               </div>
+               <!-- Contenido central -->
+               <div class="flex flex-col items-center text-center pt-4">
                  ${petAvatar(p, 'lg')}
                  <div class="mt-3 font-bold text-gray-900">${p.name}</div>
-                 <div class="text-sm text-gray-400 mt-0.5">${p.species} · ${p.breed || 'Sin raza'}</div>
+                 <div class="text-sm text-gray-400 mt-0.5">${p.species} · ${p.breed || 'Mestizo'}</div>
                  <div class="text-xs text-gray-400 mt-0.5">${getAge(p.dateOfBirth)}</div>
                  <div class="flex gap-2 mt-3 flex-wrap justify-center">
                    ${(p.personalityTags || []).slice(0,2).map(t => `<span class="tag text-xs">${t}</span>`).join('')}
                  </div>
                </div>
+               <!-- Stats -->
                <div class="mt-4 pt-4 border-t border-gray-100 grid grid-cols-2 gap-2 text-xs text-center text-gray-500">
                  <div><div class="font-semibold text-gray-800">${(p.vaccines||[]).length}</div>Vacunas</div>
                  <div><div class="font-semibold text-gray-800">${(p.medications||[]).length}</div>Medicamentos</div>
                </div>
+               <!-- Botón Ver ficha -->
+               <button onclick="openPet('${p.id}')"
+                 class="mt-4 w-full py-2 rounded-xl bg-brand-50 hover:bg-brand-100 text-brand-700 text-sm font-semibold transition-colors">
+                 Ver ficha →
+               </button>
              </div>`).join('')}
          </div>`}
   `);
@@ -1704,24 +1724,87 @@ function savePet() {
   navigate('petProfile', { currentPetId: pet.id, currentTab: 'general' });
 }
 
-function confirmDeletePet(petId) {
+function openDeletePetWithCode(petId) {
   const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const hasTwoTutors = pet.tutor2?.name;
+  const email = state.user?.email || '';
   openModal(`
-    <div class="modal-box p-6 text-center">
-      <div class="text-5xl mb-3">⚠️</div>
-      <h3 class="text-lg font-bold text-gray-900 mb-2">¿Eliminar a ${pet?.name}?</h3>
-      <p class="text-sm text-gray-500 mb-6">Esta acción no se puede deshacer. Se eliminará toda la información de ${pet?.name}.</p>
-      <div class="flex gap-3">
-        <button onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
-        <button onclick="deletePet('${petId}')" class="flex-1 px-4 py-2 bg-red-500 text-white rounded-xl font-medium hover:bg-red-600 transition-colors">Eliminar</button>
+    <div class="modal-box p-6">
+      <div class="text-center mb-4">
+        <div class="text-5xl mb-2">🗑️</div>
+        <h3 class="text-lg font-bold text-gray-900">Eliminar a ${pet.name}</h3>
+        <p class="text-sm text-gray-500 mt-1">
+          ${hasTwoTutors
+            ? `Esta mascota tiene 2 tutores. Solo se eliminará de <strong>tu perfil</strong>. El otro tutor mantendrá acceso.`
+            : `Esta acción eliminará toda la información de <strong>${pet.name}</strong> permanentemente.`}
+        </p>
+      </div>
+      <div id="delete-step-1">
+        <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-700 mb-4">
+          ⚠️ Para confirmar, enviaremos un código de verificación a:<br/>
+          <strong>${email}</strong>
+        </div>
+        <div class="flex gap-3">
+          <button onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button onclick="sendDeleteCode('${petId}')" class="flex-1 py-2 bg-red-500 text-white rounded-xl font-semibold text-sm hover:bg-red-600 transition-colors">
+            Enviar código
+          </button>
+        </div>
+      </div>
+      <div id="delete-step-2" class="hidden">
+        <p class="text-sm text-gray-500 mb-3">Ingresa el código de 6 dígitos enviado a <strong>${email}</strong></p>
+        <input id="delete-code-input" type="text" maxlength="6" placeholder="000000"
+          class="input-field text-center text-2xl tracking-[0.5em] font-bold mb-1" />
+        <p id="delete-code-error" class="text-xs text-red-500 text-center mb-3 hidden">Código incorrecto. Intenta nuevamente.</p>
+        <div class="flex gap-3">
+          <button onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button onclick="verifyDeleteCode('${petId}')" class="flex-1 py-2 bg-red-500 text-white rounded-xl font-semibold text-sm hover:bg-red-600 transition-colors">
+            Confirmar eliminación
+          </button>
+        </div>
+        <button onclick="sendDeleteCode('${petId}')" class="w-full text-xs text-gray-400 hover:text-gray-600 mt-2">Reenviar código</button>
       </div>
     </div>`);
 }
 
+function sendDeleteCode(petId) {
+  const code = String(Math.floor(100000 + Math.random() * 900000));
+  state.deleteCode = code;
+  state.deletePetId = petId;
+  // En producción se enviaría por email. Aquí lo mostramos en consola y toast de demo.
+  console.log(`[MyPets] Código de eliminación: ${code}`);
+  document.getElementById('delete-step-1').classList.add('hidden');
+  document.getElementById('delete-step-2').classList.remove('hidden');
+  showToast(`📧 Código enviado a ${state.user?.email} (demo: ${code})`, 'success');
+}
+
+function verifyDeleteCode(petId) {
+  const input = document.getElementById('delete-code-input')?.value?.trim();
+  const error = document.getElementById('delete-code-error');
+  if (input !== state.deleteCode) {
+    error?.classList.remove('hidden');
+    document.getElementById('delete-code-input').classList.add('border-red-400');
+    return;
+  }
+  deletePet(petId);
+}
+
+function confirmDeletePet(petId) { openDeletePetWithCode(petId); }
+
 function deletePet(petId) {
-  state.pets = state.pets.filter(p => p.id !== petId);
+  const pet = state.pets.find(p => p.id === petId);
+  const hasTwoTutors = pet?.tutor2?.name;
+  if (hasTwoTutors) {
+    // Solo remover al tutor actual — mantener la mascota para el otro tutor
+    pet.tutor2 = null;
+    showToast(`${pet.name} eliminada de tu perfil`, 'success');
+  } else {
+    state.pets = state.pets.filter(p => p.id !== petId);
+    showToast(`${pet?.name} eliminada`, 'error');
+  }
+  state.deleteCode = null; state.deletePetId = null;
   saveState(); closeModal(); navigate('pets');
-  showToast('Mascota eliminada', 'error');
 }
 
 function saveEditPet(petId) {
