@@ -563,7 +563,7 @@ function stepBasic() {
 function stepPhysical() {
   const d = state.newPetData;
   const tags = ['Juguetón','Cariñoso','Tranquilo','Activo','Tímido','Sociable','Independiente','Protector'];
-  const colors = ['Negro','Blanco','Gris','Marrón','Dorado','Amarillo','Crema','Naranja','Rojo','Canela','Atigrado','Manchado negro y blanco','Manchado marrón y blanco','Tricolor','Bicolor','Azul grisáceo','Plateado','Otro'];
+  const colors = ['Negro','Blanco','Gris','Café','Dorado','Amarillo','Crema','Naranja','Rojo','Canela','Atigrado','Manchado negro y blanco','Manchado café y blanco','Tricolor','Bicolor','Azul grisáceo','Plateado','Otro'];
   const sizes = [
     { label: 'Pequeño', range: 'hasta 10 kg' },
     { label: 'Mediano', range: '10 – 25 kg' },
