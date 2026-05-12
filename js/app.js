@@ -1799,7 +1799,7 @@ function openMedModal(petId) {
         <div class="grid grid-cols-2 gap-3">
           <div>
             <label class="form-label">Hora inicio *</label>
-            <select id="m-start-time" class="input-field" onchange="updateMedPreview()">
+            <select id="m-start-time" class="input-field text-center" onchange="updateMedPreview()">
               ${Array.from({length:24},(_,i)=>{const h=String(i).padStart(2,'0');return`<option value="${h}:00"${i===8?' selected':''}>${h}:00</option>`;}).join('')}
             </select>
           </div>
