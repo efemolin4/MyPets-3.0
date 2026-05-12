@@ -2648,6 +2648,16 @@ function injectStyles() {
       /* Section cards: tighter padding */
       .space-y-3>*+*{margin-top:.6rem}
     }
+    /* Modal: flex column so footer can stick */
+    .modal-box{display:flex;flex-direction:column}
+    /* Sticky action buttons — last direct div child of modal-box (the button row) */
+    .modal-box>form>div:last-child,
+    .modal-box>div.space-y-3>div:last-child,
+    .modal-box>div.space-y-4>div:last-child{
+      position:sticky;bottom:0;background:white;
+      padding-top:12px;margin-top:4px;
+      border-top:1px solid #f3f4f6;z-index:2
+    }
     @keyframes slideInUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
     @keyframes slideUpModal{from{opacity:0;transform:translateY(100%)}to{opacity:1;transform:translateY(0)}}
     .animate-slide-in-up{animation:slideInUp .25s ease both}
