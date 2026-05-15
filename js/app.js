@@ -18,6 +18,11 @@ function sendEmail(to, subject, body, extra = {}) {
   return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: to, subject, message: body, ...extra });
 }
 
+// ---- SUPABASE CONFIG ----
+const SUPABASE_URL = 'https://dmpvqhdpldlvzwunscah.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtcHZxaGRwbGRsdnp3dW5zY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NjExNTQsImV4cCI6MjA5NDQzNzE1NH0.gUmmrm7hgzAHMKcIw1hBLDBEj7sr8lZf6g6zaIzgblI';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
 // ---- HELPERS DE USUARIOS / INVITACIONES ----
 function getUsers()        { try { return JSON.parse(localStorage.getItem('mypets_users') || '[]'); } catch(e) { return []; } }
 function saveUsers(u)      { localStorage.setItem('mypets_users', JSON.stringify(u)); }
@@ -2150,79 +2155,90 @@ function openEditPetModal(petId) {
 }
 
 // ---- CONTROLADORES ----
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
-  const email = document.getElementById('l-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('l-pass').value;
-  // Demo account always works
-  if (email === 'demo@mypets.cl') {
-    const name = 'Felipe Molina';
-    state.user = { name, email }; state.isLoggedIn = true; saveState(); navigate('dashboard'); return;
-  }
-  const users = getUsers();
-  const user = users.find(u => u.email === email);
-  if (!user) { showToast('Email no registrado', 'error'); return; }
-  if (user.password !== btoa(pass)) { showToast('Contraseña incorrecta', 'error'); return; }
-  state.user = { name: user.name, email: user.email };
-  state.isLoggedIn = true; saveState(); navigate('dashboard');
+  await login();
 }
 
-function handleRegister(e) {
+async function login() {
+  const email = document.getElementById('l-email')?.value?.trim().toLowerCase();
+  const pass  = document.getElementById('l-pass')?.value;
+  if (!email || !pass) { showToast('Completa todos los campos', 'error'); return; }
+
+  // Demo mode — bypass Supabase
+  if (email === 'demo@mypets.cl') {
+    loadDemoAndLogin(); return;
+  }
+
+  showToast('Iniciando sesión...', '');
+  const { data, error } = await sb.auth.signInWithPassword({ email, password: pass });
+  if (error) { showToast(error.message === 'Invalid login credentials' ? 'Email o contraseña incorrectos' : error.message, 'error'); return; }
+
+  const userName = data.user.user_metadata?.name || email.split('@')[0];
+  state.user = { name: userName, email, id: data.user.id };
+  state.isLoggedIn = true;
+  saveState();
+  showToast('¡Bienvenido! 👋', 'success');
+  navigate('dashboard');
+}
+
+async function handleRegister(e) {
   e.preventDefault();
-  const name  = document.getElementById('r-name').value.trim();
-  const email = document.getElementById('r-email').value.trim().toLowerCase();
-  const pass  = document.getElementById('r-pass').value;
-  const pass2 = document.getElementById('r-pass2').value;
+  await register();
+}
+
+async function register() {
+  const name  = document.getElementById('r-name')?.value?.trim();
+  const email = document.getElementById('r-email')?.value?.trim().toLowerCase();
+  const pass  = document.getElementById('r-pass')?.value;
+  const pass2 = document.getElementById('r-pass2')?.value;
+
+  if (!name || !email || !pass) { showToast('Completa todos los campos', 'error'); return; }
   if (pass !== pass2) { showToast('Las contraseñas no coinciden', 'error'); return; }
   if (pass.length < 6) { showToast('Mínimo 6 caracteres', 'error'); return; }
-  const users = getUsers();
-  if (users.find(u => u.email === email)) { showToast('Email ya registrado', 'error'); return; }
-  const inviteToken = new URLSearchParams(location.search).get('invite') || location.hash.match(/invite=([^&]+)/)?.[1];
-  users.push({ name, email, password: btoa(pass), createdAt: new Date().toISOString() });
-  saveUsers(users);
-  // Check if registering from an invitation
-  if (inviteToken) {
-    const invites = getInvites();
-    const inv = invites.find(i => i.token === inviteToken && !i.used);
-    if (inv) {
-      inv.used = true; inv.tutorEmail = email; inv.tutorName = name;
-      saveInvites(invites);
-      // Load inviter's pets so we can show the shared pet
-      showToast(`✅ Cuenta creada. Tienes acceso a ver la mascota compartida.`, 'success');
-    }
+
+  showToast('Creando cuenta...', '');
+  const { data, error } = await sb.auth.signUp({
+    email, password: pass,
+    options: { data: { name } }
+  });
+  if (error) {
+    showToast(error.message === 'User already registered' ? 'Email ya registrado' : error.message, 'error');
+    return;
   }
-  state.user = { name, email }; state.isLoggedIn = true; saveState(); navigate('dashboard');
+
+  state.user = { name, email, id: data.user?.id };
+  state.isLoggedIn = true;
+  state.pets = []; state.events = []; state.expenses = [];
+  saveState();
+  showToast('¡Cuenta creada! Bienvenido 🎉', 'success');
+  navigate('dashboard');
 }
 
-function handleForgot() {
+async function handleForgot() {
+  await sendForgotEmail();
+}
+
+async function sendForgotEmail() {
   const email = document.getElementById('f-email')?.value?.trim().toLowerCase();
   if (!email) { showToast('Ingresa tu email', 'error'); return; }
-  const users = getUsers();
-  if (!users.find(u => u.email === email) && email !== 'demo@mypets.cl') {
-    showToast('Email no encontrado', 'error'); return;
-  }
-  const token = genId() + genId();
-  const resets = getResets();
-  resets.push({ email, token, createdAt: Date.now(), used: false });
-  saveResets(resets);
-  const link = `${location.origin}${location.pathname}#reset=${token}`;
-  sendEmail(email, 'MyPets – Recuperar contraseña',
-    `Hola,\n\nHaz clic en el siguiente enlace para restablecer tu contraseña:\n${link}\n\nEste enlace expira en 1 hora.\n\nMyPets 3.0`)
-    .then(() => {
-      // Show link in toast for demo (since EmailJS may not be configured)
-      showToast(`📧 Enlace enviado a ${email}`, 'success');
-      console.log(`[MyPets] Reset link: ${link}`);
-    })
-    .catch(() => {
-      showToast(`📧 (Demo) Link copiado a consola`, 'success');
-      console.log(`[MyPets] Reset link: ${link}`);
-    });
+
+  const { error } = await sb.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.origin + '?reset=true'
+  });
+  if (error) { showToast(error.message, 'error'); return; }
+  showToast(`📧 Enlace enviado a ${email}`, 'success');
   setTimeout(() => navigate('login'), 2000);
 }
 
-function logout() {
-  state.isLoggedIn = false; state.user = null;
-  saveState(); navigate('login');
+async function logout() {
+  await sb.auth.signOut();
+  const fresh = { isLoggedIn: false, user: null, pets: [], events: [], expenses: [],
+    currentView: 'login', currentPetId: null, currentTab: 'general',
+    addPetStep: 1, newPetData: {}, pages: {} };
+  Object.assign(state, fresh);
+  localStorage.removeItem('mypets_v3');
+  render();
 }
 
 function openPet(id) { navigate('petProfile', { currentPetId: id, currentTab: 'general' }); }
@@ -4225,7 +4241,40 @@ function viewAdmin() {
 }
 
 // ---- INIT ----
-initEmailJS();
-injectStyles();
-loadState();
-render();
+async function initApp() {
+  initEmailJS();
+  injectStyles();
+  loadState();
+
+  // Check for existing Supabase session
+  const { data: { session } } = await sb.auth.getSession();
+  if (session && !state.isLoggedIn) {
+    const userName = session.user.user_metadata?.name || session.user.email.split('@')[0];
+    state.user = { name: userName, email: session.user.email, id: session.user.id };
+    state.isLoggedIn = true;
+    if (!state.currentView || state.currentView === 'login') {
+      state.currentView = 'dashboard';
+    }
+  }
+
+  // Listen for auth changes (token refresh, sign out from another tab)
+  sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'SIGNED_OUT') {
+      state.isLoggedIn = false;
+      state.user = null;
+      state.currentView = 'login';
+      render();
+    }
+    if (event === 'TOKEN_REFRESHED' && session) {
+      state.user = {
+        name: session.user.user_metadata?.name || session.user.email.split('@')[0],
+        email: session.user.email,
+        id: session.user.id
+      };
+    }
+  });
+
+  render();
+}
+
+document.addEventListener('DOMContentLoaded', initApp);
