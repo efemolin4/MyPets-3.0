@@ -591,6 +591,107 @@ function viewDashboard() {
         </div>
       </div>` : ''}
     </div>
+
+    ${(() => {
+      // Streaks de medicamentos
+      const streakCards = pets.map(p => {
+        const activeMeds = (p.medications||[]).filter(m => m.active);
+        if (!activeMeds.length) return null;
+        const doseLog = p.doseLog || [];
+        // Count consecutive days backwards from today
+        let streak = 0;
+        let checkDate = new Date();
+        for (let i = 0; i < 365; i++) {
+          const dateStr = checkDate.toISOString().slice(0,10);
+          if (doseLog.some(dl => dl.date === dateStr && dl.confirmed)) {
+            streak++;
+            checkDate.setDate(checkDate.getDate()-1);
+          } else {
+            break;
+          }
+        }
+        return { name: p.name, streak };
+      }).filter(Boolean);
+
+      // Próximos cumpleaños (30 días)
+      const now = new Date();
+      const birthdayPets = pets.map(p => {
+        if (!p.dateOfBirth) return null;
+        const dob = new Date(p.dateOfBirth + 'T12:00:00');
+        const thisYear = now.getFullYear();
+        let next = new Date(thisYear, dob.getMonth(), dob.getDate());
+        if (next < now) next = new Date(thisYear+1, dob.getMonth(), dob.getDate());
+        const diffDays = Math.round((next - now) / 86400000);
+        if (diffDays > 30) return null;
+        const age = next.getFullYear() - dob.getFullYear();
+        return { name: p.name, days: diffDays, age };
+      }).filter(Boolean);
+
+      // Recomendaciones inteligentes
+      const recs = [];
+      pets.forEach(p => {
+        const ageYears = p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / (365.25*86400000)) : 0;
+        const lastVaccDate = (p.vaccines||[]).reduce((max,v) => v.date>max?v.date:max, '');
+        const vaccineAge = lastVaccDate ? Math.floor((Date.now()-new Date(lastVaccDate).getTime())/(30.44*86400000)) : 999;
+        if (p.species === 'Perro' && ageYears >= 7) recs.push({ icon:'🔬', text:`${p.name} tiene ${ageYears} años. Considera análisis de sangre anual para detección temprana.` });
+        if (p.species === 'Perro' && (p.breed||'').match(/Golden Retriever|Labrador/i)) recs.push({ icon:'🦴', text:`Los ${p.breed}s son propensos a displasia de cadera. Consulta con tu vet sobre control radiológico.` });
+        if (p.species === 'Gato' && ageYears >= 10) recs.push({ icon:'🐈', text:`${p.name} es un gato senior (${ageYears} años). Necesita revisiones veterinarias cada 6 meses.` });
+        if (!p.vet?.name) recs.push({ icon:'📋', text:`${p.name} no tiene datos de veterinario. Regístralos para tener acceso rápido en emergencias.` });
+        if (vaccineAge >= 12) recs.push({ icon:'💉', text:`${p.name} lleva más de un año sin registrar vacunas. Revisa el calendario de vacunación.` });
+      });
+
+      const shownRecs = recs.slice(0,2);
+      const hasExtras = streakCards.length || birthdayPets.length || shownRecs.length;
+      if (!hasExtras) return '';
+
+      return `
+      <div class="grid md:grid-cols-3 gap-4 mt-4">
+        ${streakCards.length ? `
+        <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+          <h2 class="font-semibold text-gray-900 mb-3">🔥 Rachas de medicamentos</h2>
+          <div class="space-y-2">
+            ${streakCards.map(s => s.streak > 0
+              ? `<div class="flex items-center gap-2 p-2.5 bg-orange-50 rounded-xl">
+                   <span class="text-xl">🔥</span>
+                   <div><div class="text-sm font-semibold text-gray-800">${s.name}</div>
+                   <div class="text-xs text-orange-600">${s.streak} día${s.streak!==1?'s':''} seguido${s.streak!==1?'s':''} sin saltarse una dosis</div></div>
+                 </div>`
+              : `<div class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl">
+                   <span class="text-xl">💪</span>
+                   <div class="text-sm text-gray-600">¡Empieza hoy tu racha con ${s.name}!</div>
+                 </div>`
+            ).join('')}
+          </div>
+        </div>` : ''}
+
+        ${birthdayPets.length ? `
+        <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+          <h2 class="font-semibold text-gray-900 mb-3">🎂 Próximos cumpleaños</h2>
+          <div class="space-y-2">
+            ${birthdayPets.map(b => `
+              <div class="flex items-center gap-2 p-2.5 bg-pink-50 rounded-xl">
+                <span class="text-xl">🎂</span>
+                <div>
+                  <div class="text-sm font-semibold text-gray-800">${b.name} cumple ${b.age} año${b.age!==1?'s':''}</div>
+                  <div class="text-xs text-pink-600">${b.days === 0 ? '¡Hoy es su cumpleaños! 🎉' : `En ${b.days} día${b.days!==1?'s':''}`}</div>
+                </div>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        ${shownRecs.length ? `
+        <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+          <h2 class="font-semibold text-gray-900 mb-3">💡 Recomendaciones</h2>
+          <div class="space-y-2">
+            ${shownRecs.map(r => `
+              <div class="flex items-start gap-2 p-2.5 bg-yellow-50 rounded-xl">
+                <span class="text-lg flex-shrink-0">${r.icon}</span>
+                <p class="text-xs text-gray-700 leading-snug">${r.text}</p>
+              </div>`).join('')}
+          </div>
+        </div>` : ''}
+      </div>`;
+    })()}
   `);
 }
 
@@ -913,8 +1014,8 @@ function stepTutors() {
 function viewPetProfile() {
   const pet = state.pets.find(p => p.id === state.currentPetId);
   if (!pet) { navigate('pets'); return ''; }
-  const tabs = ['general','vacunas','desparasitación','medicamentos','historial'];
-  const tabLabels = { general:'General', vacunas:'Vacunas', 'desparasitación':'Desparasitación', medicamentos:'Tratamiento', historial:'Historial' };
+  const tabs = ['general','vacunas','desparasitación','medicamentos','historial','seguimiento','nutricion'];
+  const tabLabels = { general:'General', vacunas:'Vacunas', 'desparasitación':'Desparasitación', medicamentos:'Tratamiento', historial:'Historial', seguimiento:'Seguimiento', nutricion:'Nutrición' };
   const tab = state.currentTab;
 
   return appShell(`
@@ -945,6 +1046,12 @@ function viewPetProfile() {
                   <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                   <span class="hidden md:inline">Eliminar</span>
                 </button>
+                <button onclick="exportPetRecord('${pet.id}')"
+                  title="Exportar expediente"
+                  class="w-8 h-8 md:w-auto md:h-auto md:px-3 md:py-1.5 rounded-xl bg-gray-50 hover:bg-teal-50 text-gray-400 hover:text-teal-600 border border-gray-200 text-xs font-medium transition-colors flex items-center justify-center gap-1">
+                  <svg class="w-3.5 h-3.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/></svg>
+                  <span class="hidden md:inline">Exportar</span>
+                </button>
               </div>
             </div>
             <div class="flex flex-wrap gap-1.5 mt-2">
@@ -974,6 +1081,8 @@ function viewPetProfile() {
         ${tab === 'desparasitación' ? tabDeworming(pet)      : ''}
         ${tab === 'medicamentos'   ? tabMedications(pet)     : ''}
         ${tab === 'historial'      ? tabHistory(pet)         : ''}
+        ${tab === 'seguimiento'    ? tabSeguimiento(pet)     : ''}
+        ${tab === 'nutricion'      ? tabNutricion(pet)       : ''}
       </div>
     </div>
   `);
@@ -1580,6 +1689,40 @@ function viewFinance() {
              ${pagerHTML('finance', expPages, expPage_)}`}
       </div>`;
     })()}`}
+
+    ${(() => {
+      // Predicción de gastos próximo mes
+      const now = new Date();
+      const last90Days = new Date(now.getTime() - 90 * 86400000).toISOString().slice(0,10);
+      const last90Expenses = allExpenses.filter(e => e.date >= last90Days);
+      const last90Total = last90Expenses.reduce((s,e) => s + Number(e.amount||0), 0);
+      const avgMonthly = Math.round(last90Total / 3);
+      if (avgMonthly === 0) return '';
+
+      // Compare last month vs prev month
+      const lastMonthStr = `${now.getFullYear()}-${String(now.getMonth()).padStart(2,'0')}`;
+      const prevMonthStr = `${now.getFullYear()}-${String(now.getMonth()-1).padStart(2,'0')}`;
+      const lastMonthTotal = allExpenses.filter(e=>e.date?.startsWith(lastMonthStr)).reduce((s,e)=>s+Number(e.amount||0),0);
+      const prevMonthTotal = allExpenses.filter(e=>e.date?.startsWith(prevMonthStr)).reduce((s,e)=>s+Number(e.amount||0),0);
+      const trend = lastMonthTotal > prevMonthTotal ? '↑' : lastMonthTotal < prevMonthTotal ? '↓' : '→';
+      const trendColor = trend==='↑' ? 'text-red-500' : trend==='↓' ? 'text-green-500' : 'text-gray-400';
+
+      return `
+      <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5 mt-4">
+        <h3 class="font-semibold text-gray-800 mb-1">📊 Predicción de gastos</h3>
+        <p class="text-xs text-gray-400 mb-3">Basado en el promedio de los últimos 3 meses</p>
+        <div class="flex items-center gap-4 flex-wrap">
+          <div>
+            <div class="text-2xl font-bold text-gray-900">~${fmtCLP(avgMonthly)}</div>
+            <div class="text-xs text-gray-500">Proyección próximo mes</div>
+          </div>
+          <div class="flex items-center gap-1">
+            <span class="text-2xl font-bold ${trendColor}">${trend}</span>
+            <span class="text-xs text-gray-400">vs mes anterior</span>
+          </div>
+        </div>
+      </div>`;
+    })()}
   `);
 }
 
@@ -2129,6 +2272,7 @@ function savePet() {
     vaccines: [], deworming: [], medications: [], clinicalHistory: [],
     personalityTags: d.personalityTags || [], allergies: d.allergies || [],
     activityLevel: d.activityLevel || 2,
+    weightHistory: [], moodLog: [], symptomsLog: [], meals: [], activities: [], doseLog: [],
   };
   state.pets.push(pet);
   state.newPetData = {}; state.addPetStep = 1;
@@ -2666,6 +2810,11 @@ function injectStyles() {
     @media(max-width:640px){
       .modal-box{animation:slideUpModal .3s cubic-bezier(.32,.72,0,1) both}
     }
+    @media print {
+      .modal-overlay { position:static !important; background:none !important; overflow:visible !important; }
+      .modal-box { box-shadow:none !important; max-height:none !important; border-radius:0 !important; }
+      aside, nav, .modal-overlay > div > div:last-child { display:none !important; }
+    }
   `;
   document.head.appendChild(style);
 }
@@ -2757,6 +2906,600 @@ function viewBotiquin() {
   `);
 }
 
+// ---- TAB: SEGUIMIENTO ----
+function tabSeguimiento(pet) {
+  const today = new Date().toISOString().slice(0, 10);
+  const history = pet.weightHistory || [];
+  const moodLog = pet.moodLog || [];
+  const symptomsLog = pet.symptomsLog || [];
+
+  // Mood for last 7 days
+  const last7Days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    last7Days.push(d.toISOString().slice(0, 10));
+  }
+  const moodColors = { great: 'bg-green-400', ok: 'bg-amber-400', low: 'bg-red-400' };
+  const moodEmojis = { great: '😄', ok: '😐', low: '😟' };
+  const moodLabels = { great: 'Excelente', ok: 'Normal', low: 'Bajo' };
+  const todayMood = moodLog.find(m => m.date === today);
+
+  // BCS description
+  const bcs = pet.bcs || null;
+  let bcsDesc = '', bcsColor = '';
+  if (bcs) {
+    if (bcs <= 3) { bcsDesc = 'Bajo peso'; bcsColor = 'text-red-600 bg-red-50'; }
+    else if (bcs <= 5) { bcsDesc = 'Peso ideal'; bcsColor = 'text-green-600 bg-green-50'; }
+    else if (bcs <= 7) { bcsDesc = 'Sobrepeso'; bcsColor = 'text-amber-600 bg-amber-50'; }
+    else { bcsDesc = 'Obesidad'; bcsColor = 'text-red-700 bg-red-100'; }
+  }
+
+  const hasWeight = history.length > 0;
+
+  setTimeout(() => { if (hasWeight) renderWeightChart(pet); }, 50);
+
+  return `
+  <div class="space-y-4">
+    <!-- Gráfico de peso -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-800">📈 Peso histórico</h3>
+        <button onclick="openWeightModal('${pet.id}')" class="btn-primary text-sm">+ Registrar peso</button>
+      </div>
+      ${hasWeight ? `
+        <canvas id="weight-chart-${pet.id}" height="180"></canvas>
+        <div class="mt-2 text-xs text-gray-400 text-center">Últimas ${Math.min(history.length, 12)} mediciones</div>
+      ` : `
+        <div class="text-center py-6">
+          <div class="text-4xl mb-2">⚖️</div>
+          <p class="text-sm text-gray-400">Sin registros de peso. ¡Añade el primero!</p>
+        </div>
+      `}
+    </div>
+
+    <!-- BCS -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-800">🏋️ Índice condición corporal (BCS)</h3>
+      </div>
+      <div class="flex gap-2 flex-wrap mb-3">
+        ${[1,2,3,4,5,6,7,8,9].map(n => `
+          <button onclick="setBCS('${pet.id}',${n})"
+            class="w-9 h-9 rounded-xl border-2 text-sm font-bold transition-all ${bcs===n ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-brand-300'}">
+            ${n}
+          </button>`).join('')}
+      </div>
+      ${bcs ? `
+        <div class="flex items-center gap-2">
+          <span class="font-bold text-2xl text-gray-800">BCS ${bcs}/9</span>
+          <span class="px-3 py-1 rounded-xl text-sm font-semibold ${bcsColor}">${bcsDesc}</span>
+        </div>
+        <p class="text-xs text-gray-400 mt-1">Escala 1-3: Bajo peso · 4-5: Peso ideal · 6-7: Sobrepeso · 8-9: Obesidad</p>
+      ` : `<p class="text-sm text-gray-400">Selecciona un valor del 1 al 9</p>`}
+    </div>
+
+    <!-- Mood tracker -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-800">😊 Estado de ánimo</h3>
+        <button onclick="openMoodModal('${pet.id}')" class="btn-primary text-sm">${todayMood ? '✏️ Editar hoy' : '+ Registrar hoy'}</button>
+      </div>
+      ${todayMood ? `
+        <div class="flex items-center gap-2 mb-3 p-3 bg-gray-50 rounded-xl">
+          <span class="text-2xl">${moodEmojis[todayMood.mood]}</span>
+          <div>
+            <div class="font-medium text-sm text-gray-800">Hoy: ${moodLabels[todayMood.mood]}</div>
+            ${todayMood.notes ? `<div class="text-xs text-gray-500">${todayMood.notes}</div>` : ''}
+          </div>
+        </div>
+      ` : `<p class="text-xs text-gray-400 mb-3">Aún no registraste el estado de hoy</p>`}
+      <div class="flex gap-1.5 items-end">
+        ${last7Days.map(d => {
+          const entry = moodLog.find(m => m.date === d);
+          const isToday = d === today;
+          return `
+          <div class="flex flex-col items-center gap-1 flex-1">
+            <div title="${entry ? moodLabels[entry.mood] : 'Sin dato'}"
+              class="w-full rounded-xl ${entry ? moodColors[entry.mood] : 'bg-gray-100'} transition-all"
+              style="height:${entry ? (entry.mood==='great'?32:entry.mood==='ok'?24:16) : 10}px"></div>
+            <div class="text-[9px] text-gray-400">${isToday ? 'Hoy' : new Date(d+'T12:00:00').toLocaleDateString('es-CL',{weekday:'short'}).slice(0,3)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <!-- Síntomas -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-800">🩺 Diario de síntomas</h3>
+        <button onclick="openSymptomsModal('${pet.id}')" class="btn-primary text-sm">+ Registrar</button>
+      </div>
+      ${symptomsLog.length === 0
+        ? `<div class="text-center py-4"><div class="text-3xl mb-2">🩺</div><p class="text-sm text-gray-400">Sin registros de síntomas</p></div>`
+        : `<div class="space-y-2">
+             ${[...symptomsLog].sort((a,b)=>b.date>a.date?1:-1).slice(0,5).map(s => `
+               <div class="p-3 bg-gray-50 rounded-xl">
+                 <div class="flex items-center gap-2 flex-wrap mb-1">
+                   <span class="text-xs text-gray-400">${formatDate(s.date)}</span>
+                   ${(s.symptoms||[]).map(sym => `<span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-lg text-xs font-medium">${sym}</span>`).join('')}
+                 </div>
+                 ${s.notes ? `<p class="text-xs text-gray-600">${s.notes}</p>` : ''}
+               </div>`).join('')}
+           </div>`}
+    </div>
+  </div>`;
+}
+
+// ---- TAB: NUTRICIÓN ----
+function tabNutricion(pet) {
+  const meals = pet.meals || [];
+  const activities = pet.activities || [];
+  const today = new Date().toISOString().slice(0, 10);
+
+  // Last 7 days for meals
+  const last7MealDays = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date(); d.setDate(d.getDate() - i);
+    last7MealDays.push(d.toISOString().slice(0, 10));
+  }
+
+  // Agrupar comidas por fecha (últimos 7 días)
+  const mealsByDate = {};
+  meals.forEach(m => { if (!mealsByDate[m.date]) mealsByDate[m.date] = []; mealsByDate[m.date].push(m); });
+  const recentMealDates = last7MealDays.filter(d => mealsByDate[d]).reverse();
+
+  // Activity weekly summary
+  const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7);
+  const weekAgoStr = weekAgo.toISOString().slice(0, 10);
+  const recentActivities = activities.filter(a => a.date >= weekAgoStr).sort((a,b) => b.date>a.date?1:-1);
+  const totalMinutes = recentActivities.reduce((s, a) => s + (parseInt(a.duration)||0), 0);
+  const totalWalks = recentActivities.filter(a => a.type === 'Paseo').length;
+  const actTypeIcon = { Paseo:'🚶', Juego:'🎾', Ejercicio:'🏃', Natación:'🏊', Otro:'⚡' };
+
+  return `
+  <div class="space-y-4">
+    <!-- Alimentación -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-800">🍽️ Registro de alimentación</h3>
+        <button onclick="openMealModal('${pet.id}')" class="btn-primary text-sm">+ Registrar comida</button>
+      </div>
+      ${meals.length === 0
+        ? `<div class="text-center py-6"><div class="text-4xl mb-2">🍽️</div><p class="text-sm text-gray-400">Sin registros de alimentación</p></div>`
+        : recentMealDates.length === 0
+          ? `<div class="text-center py-4"><p class="text-sm text-gray-400">Sin comidas registradas esta semana</p></div>`
+          : `<div class="space-y-3">
+               ${recentMealDates.map(date => `
+                 <div>
+                   <div class="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">${formatDate(date)}</div>
+                   <div class="space-y-1.5">
+                     ${mealsByDate[date].map(m => `
+                       <div class="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
+                         <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center text-base">🍽️</div>
+                         <div class="flex-1 min-w-0">
+                           <span class="text-sm font-medium text-gray-800">${m.time} · ${m.type}</span>
+                           <span class="text-xs text-gray-400 ml-2">${m.amount} ${m.unit}</span>
+                           ${m.notes ? `<div class="text-xs text-gray-500">${m.notes}</div>` : ''}
+                         </div>
+                       </div>`).join('')}
+                   </div>
+                 </div>`).join('')}
+             </div>`}
+    </div>
+
+    <!-- Actividad -->
+    <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
+      <div class="flex items-center justify-between mb-3">
+        <h3 class="font-semibold text-gray-800">🏃 Registro de actividad</h3>
+        <button onclick="openActivityModal('${pet.id}')" class="btn-primary text-sm">+ Registrar actividad</button>
+      </div>
+      ${recentActivities.length > 0 ? `
+        <div class="grid grid-cols-2 gap-3 mb-4">
+          <div class="bg-brand-50 rounded-xl p-3 text-center">
+            <div class="text-xl font-bold text-brand-700">${totalMinutes} min</div>
+            <div class="text-xs text-gray-500">Total esta semana</div>
+          </div>
+          <div class="bg-teal-50 rounded-xl p-3 text-center">
+            <div class="text-xl font-bold text-teal-700">${totalWalks}</div>
+            <div class="text-xs text-gray-500">Paseos esta semana</div>
+          </div>
+        </div>` : ''}
+      ${activities.length === 0
+        ? `<div class="text-center py-6"><div class="text-4xl mb-2">🏃</div><p class="text-sm text-gray-400">Sin registros de actividad</p></div>`
+        : `<div class="space-y-2">
+             ${[...activities].sort((a,b)=>b.date>a.date?1:-1).slice(0,7).map(a => `
+               <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
+                 <div class="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center text-lg">${actTypeIcon[a.type]||'⚡'}</div>
+                 <div class="flex-1 min-w-0">
+                   <div class="flex items-center gap-2">
+                     <span class="text-sm font-medium text-gray-800">${a.type}</span>
+                     <span class="text-xs text-gray-400">${a.duration} min${a.distance ? ` · ${a.distance} km` : ''}</span>
+                   </div>
+                   <div class="text-xs text-gray-400">${formatDate(a.date)}${a.notes ? ` · ${a.notes}` : ''}</div>
+                 </div>
+               </div>`).join('')}
+           </div>`}
+    </div>
+  </div>`;
+}
+
+// ---- WEIGHT CHART ----
+function renderWeightChart(pet) {
+  setTimeout(() => {
+    const canvas = document.getElementById(`weight-chart-${pet.id}`);
+    if (!canvas) return;
+    if (window._weightCharts && window._weightCharts[pet.id]) {
+      window._weightCharts[pet.id].destroy();
+    }
+    if (!window._weightCharts) window._weightCharts = {};
+    const history = (pet.weightHistory || []).slice(-12);
+    if (history.length === 0) return;
+    window._weightCharts[pet.id] = new Chart(canvas, {
+      type: 'line',
+      data: {
+        labels: history.map(h => formatDate(h.date)),
+        datasets: [{
+          label: 'Peso (kg)',
+          data: history.map(h => parseFloat(h.kg) + (parseInt(h.gr||0)/1000)),
+          borderColor: '#7c3aed',
+          backgroundColor: 'rgba(124,58,237,0.08)',
+          tension: 0.4, fill: true,
+          pointBackgroundColor: '#7c3aed', pointRadius: 4,
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: false, grid: { color: '#f3f4f6' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }, 100);
+}
+
+// ---- BCS setter ----
+function setBCS(petId, score) {
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  pet.bcs = score;
+  saveState(); render();
+}
+
+// ---- MODAL: Peso ----
+function openWeightModal(petId) {
+  const today = new Date().toISOString().slice(0, 10);
+  openModal(`
+    <div class="modal-box p-4 sm:p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">⚖️ Registrar peso</h3>
+      <form onsubmit="saveWeight(event,'${petId}')" class="space-y-3">
+        <div>
+          <label class="form-label">Fecha *</label>
+          <input id="wt-date" type="date" required value="${today}" class="input-field" />
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Kg *</label>
+            <input id="wt-kg" type="number" required min="0" step="0.1" placeholder="Ej: 12" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Gramos (0-999)</label>
+            <input id="wt-gr" type="number" min="0" max="999" step="1" placeholder="Ej: 500" class="input-field" />
+          </div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar</button>
+        </div>
+      </form>
+    </div>`);
+}
+
+function saveWeight(e, petId) {
+  e.preventDefault();
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const g = id => document.getElementById(id)?.value;
+  pet.weightHistory = pet.weightHistory || [];
+  pet.weightHistory.push({ date: g('wt-date'), kg: parseFloat(g('wt-kg')||0), gr: parseInt(g('wt-gr')||0) });
+  pet.weightHistory.sort((a,b) => a.date > b.date ? 1 : -1);
+  saveState(); closeModal(); render();
+  showToast('Peso registrado ✓', 'success');
+}
+
+// ---- MODAL: Mood ----
+function openMoodModal(petId) {
+  const today = new Date().toISOString().slice(0, 10);
+  const pet = state.pets.find(p => p.id === petId);
+  const existing = (pet?.moodLog || []).find(m => m.date === today);
+  openModal(`
+    <div class="modal-box p-4 sm:p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">😊 Estado de ánimo de hoy</h3>
+      <div class="space-y-4">
+        <div class="grid grid-cols-3 gap-3">
+          ${[{v:'great',e:'😄',l:'Excelente'},{v:'ok',e:'😐',l:'Normal'},{v:'low',e:'😟',l:'Bajo'}].map(o => `
+            <button type="button" onclick="selectMood('${o.v}')" id="mood-${o.v}"
+              class="py-4 rounded-2xl border-2 text-center transition-all ${existing?.mood===o.v ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-brand-300'}">
+              <div class="text-3xl mb-1">${o.e}</div>
+              <div class="text-xs font-semibold text-gray-700">${o.l}</div>
+            </button>`).join('')}
+        </div>
+        <input type="hidden" id="mood-val" value="${existing?.mood||''}" />
+        <div>
+          <label class="form-label">Notas (opcional)</label>
+          <textarea id="mood-notes" rows="2" class="input-field resize-none" placeholder="¿Cómo se comportó hoy?">${existing?.notes||''}</textarea>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button onclick="saveMood('${petId}')" class="btn-primary flex-1">Guardar</button>
+        </div>
+      </div>
+    </div>`);
+  // Highlight existing selection
+  if (existing?.mood) {
+    setTimeout(() => selectMood(existing.mood), 50);
+  }
+}
+
+function selectMood(val) {
+  document.getElementById('mood-val').value = val;
+  ['great','ok','low'].forEach(o => {
+    const btn = document.getElementById('mood-'+o);
+    if (btn) btn.className = `py-4 rounded-2xl border-2 text-center transition-all ${o===val ? 'border-brand-500 bg-brand-50' : 'border-gray-200 hover:border-brand-300'}`;
+  });
+}
+
+function saveMood(petId) {
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const mood = document.getElementById('mood-val')?.value;
+  if (!mood) { showToast('Selecciona un estado de ánimo', 'error'); return; }
+  const notes = document.getElementById('mood-notes')?.value || '';
+  const today = new Date().toISOString().slice(0, 10);
+  pet.moodLog = (pet.moodLog || []).filter(m => m.date !== today);
+  pet.moodLog.push({ date: today, mood, notes });
+  saveState(); closeModal(); render();
+  showToast('Estado de ánimo registrado ✓', 'success');
+}
+
+// ---- MODAL: Síntomas ----
+const SYMPTOM_TAGS = ['Vómito','Diarrea','Sin apetito','Letargo','Tos','Estornudos','Cojera','Rascado','Otros'];
+
+function openSymptomsModal(petId) {
+  const today = new Date().toISOString().slice(0, 10);
+  openModal(`
+    <div class="modal-box p-4 sm:p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">🩺 Registrar síntomas</h3>
+      <div class="space-y-3">
+        <div>
+          <label class="form-label">Fecha *</label>
+          <input id="sym-date" type="date" value="${today}" class="input-field" />
+        </div>
+        <div>
+          <label class="form-label">Síntomas (selecciona uno o más)</label>
+          <div class="flex flex-wrap gap-2 mt-1" id="sym-tags">
+            ${SYMPTOM_TAGS.map(s => `
+              <button type="button" onclick="toggleSymptomTag(this,'${s}')"
+                data-tag="${s}"
+                class="px-3 py-1.5 rounded-xl border-2 text-xs font-medium transition-all border-gray-200 text-gray-600 hover:border-brand-300">
+                ${s}
+              </button>`).join('')}
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Notas (opcional)</label>
+          <textarea id="sym-notes" rows="2" class="input-field resize-none" placeholder="Observaciones..."></textarea>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button onclick="saveSymptoms('${petId}')" class="btn-primary flex-1">Guardar</button>
+        </div>
+      </div>
+    </div>`);
+}
+
+function toggleSymptomTag(btn, tag) {
+  btn.classList.toggle('border-brand-500');
+  btn.classList.toggle('bg-brand-50');
+  btn.classList.toggle('text-brand-700');
+  btn.classList.toggle('border-gray-200');
+}
+
+function saveSymptoms(petId) {
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const selected = [...document.querySelectorAll('#sym-tags button.border-brand-500')].map(b => b.dataset.tag);
+  if (!selected.length) { showToast('Selecciona al menos un síntoma', 'error'); return; }
+  const date = document.getElementById('sym-date')?.value;
+  const notes = document.getElementById('sym-notes')?.value || '';
+  pet.symptomsLog = pet.symptomsLog || [];
+  pet.symptomsLog.push({ date, symptoms: selected, notes });
+  saveState(); closeModal(); render();
+  showToast('Síntomas registrados ✓', 'success');
+}
+
+// ---- MODAL: Comida ----
+function openMealModal(petId) {
+  const today = new Date().toISOString().slice(0, 10);
+  openModal(`
+    <div class="modal-box p-4 sm:p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">🍽️ Registrar comida</h3>
+      <form onsubmit="saveMeal(event,'${petId}')" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Fecha *</label>
+            <input id="ml-date" type="date" required value="${today}" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Momento del día</label>
+            <select id="ml-time" class="input-field">
+              <option>Mañana</option><option>Mediodía</option><option>Tarde</option><option>Noche</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Tipo de alimento *</label>
+          <select id="ml-type" class="input-field">
+            <option>Seco</option><option>Húmedo</option><option>BARF</option><option>Casero</option><option>Snack</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Cantidad *</label>
+            <input id="ml-amount" type="number" required min="0" step="0.1" placeholder="Ej: 150" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Unidad</label>
+            <select id="ml-unit" class="input-field">
+              <option value="g">g</option><option value="ml">ml</option><option value="porción">porción</option>
+            </select>
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Notas (opcional)</label>
+          <input id="ml-notes" placeholder="Ej: Royal Canin Adult" class="input-field" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar</button>
+        </div>
+      </form>
+    </div>`);
+}
+
+function saveMeal(e, petId) {
+  e.preventDefault();
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const g = id => document.getElementById(id)?.value;
+  pet.meals = pet.meals || [];
+  pet.meals.push({ date: g('ml-date'), time: g('ml-time'), type: g('ml-type'), amount: parseFloat(g('ml-amount')||0), unit: g('ml-unit'), notes: g('ml-notes') });
+  saveState(); closeModal(); render();
+  showToast('Comida registrada ✓', 'success');
+}
+
+// ---- MODAL: Actividad ----
+function openActivityModal(petId) {
+  const today = new Date().toISOString().slice(0, 10);
+  openModal(`
+    <div class="modal-box p-4 sm:p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">🏃 Registrar actividad</h3>
+      <form onsubmit="saveActivity(event,'${petId}')" class="space-y-3">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Fecha *</label>
+            <input id="ac-date" type="date" required value="${today}" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Tipo *</label>
+            <select id="ac-type" class="input-field">
+              <option>Paseo</option><option>Juego</option><option>Ejercicio</option><option>Natación</option><option>Otro</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="form-label">Duración (min) *</label>
+            <input id="ac-duration" type="number" required min="1" placeholder="Ej: 30" class="input-field" />
+          </div>
+          <div>
+            <label class="form-label">Distancia (km, opcional)</label>
+            <input id="ac-distance" type="number" min="0" step="0.1" placeholder="Ej: 2.5" class="input-field" />
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Notas (opcional)</label>
+          <input id="ac-notes" placeholder="Ej: Parque Las Lilas" class="input-field" />
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar</button>
+        </div>
+      </form>
+    </div>`);
+}
+
+function saveActivity(e, petId) {
+  e.preventDefault();
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const g = id => document.getElementById(id)?.value;
+  pet.activities = pet.activities || [];
+  const dist = parseFloat(g('ac-distance'));
+  pet.activities.push({ date: g('ac-date'), type: g('ac-type'), duration: parseInt(g('ac-duration')||0), distance: isNaN(dist) ? null : dist, notes: g('ac-notes') });
+  saveState(); closeModal(); render();
+  showToast('Actividad registrada ✓', 'success');
+}
+
+// ---- EXPORT PET RECORD ----
+function exportPetRecord(petId) {
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const activeVaccines = (pet.vaccines || []).filter(v => v.nextDate && v.nextDate >= new Date().toISOString().slice(0,10)).slice(0,5);
+  const activeMeds = (pet.medications || []).filter(m => m.active).slice(0,5);
+  const lastHistory = [...(pet.clinicalHistory || [])].sort((a,b)=>b.date>a.date?1:-1).slice(0,5);
+  const vet = pet.vet || {};
+
+  openModal(`
+    <div class="modal-box p-4 sm:p-6" id="export-record">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-lg font-bold text-gray-900">📄 Expediente médico — ${pet.name}</h3>
+        <button onclick="closeModal()" class="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center">✕</button>
+      </div>
+
+      <div id="printable-record">
+        <div class="border-b border-gray-200 pb-4 mb-4">
+          <h4 class="font-bold text-gray-800 text-lg">${pet.name}</h4>
+          <p class="text-sm text-gray-500">${pet.species} · ${pet.breed||'Mestizo'} · ${pet.sex||''} · ${getAge(pet.dateOfBirth)}</p>
+          ${pet.chipNumber ? `<p class="text-xs text-gray-400">Chip: ${pet.chipNumber}</p>` : ''}
+          ${pet.reproductiveStatus ? `<p class="text-xs text-gray-400">${pet.reproductiveStatus}</p>` : ''}
+          ${(pet.allergies||[]).length ? `<p class="text-xs text-red-500 font-medium">Alergias: ${pet.allergies.join(', ')}</p>` : ''}
+          ${(pet.chronicConditions||[]).filter(c=>c!=='Ninguna').length ? `<p class="text-xs text-orange-600 font-medium">Condiciones: ${pet.chronicConditions.join(', ')}</p>` : ''}
+        </div>
+
+        ${vet.name ? `
+        <div class="mb-4">
+          <h5 class="font-semibold text-gray-700 text-sm mb-2">Veterinario</h5>
+          <p class="text-sm text-gray-600">${vet.name}${vet.clinic ? ` · ${vet.clinic}` : ''}</p>
+          ${vet.phone ? `<p class="text-xs text-gray-400">📞 ${vet.phone}</p>` : ''}
+          ${vet.email ? `<p class="text-xs text-gray-400">✉️ ${vet.email}</p>` : ''}
+        </div>` : ''}
+
+        ${activeVaccines.length ? `
+        <div class="mb-4">
+          <h5 class="font-semibold text-gray-700 text-sm mb-2">Vacunas vigentes</h5>
+          <div class="space-y-1">
+            ${activeVaccines.map(v => `<div class="text-xs bg-blue-50 rounded-lg p-2"><span class="font-medium">${v.name}</span> · Próxima: ${formatDate(v.nextDate)}</div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        ${activeMeds.length ? `
+        <div class="mb-4">
+          <h5 class="font-semibold text-gray-700 text-sm mb-2">Medicamentos activos</h5>
+          <div class="space-y-1">
+            ${activeMeds.map(m => `<div class="text-xs bg-green-50 rounded-lg p-2"><span class="font-medium">${m.name}</span> · ${m.dose} · ${m.frequency}</div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        ${lastHistory.length ? `
+        <div class="mb-4">
+          <h5 class="font-semibold text-gray-700 text-sm mb-2">Últimos eventos clínicos</h5>
+          <div class="space-y-1">
+            ${lastHistory.map(h => `<div class="text-xs bg-gray-50 rounded-lg p-2"><span class="font-medium">${formatDate(h.date)}</span> · ${h.title}${h.doctor ? ` · ${h.doctor}` : ''}</div>`).join('')}
+          </div>
+        </div>` : ''}
+
+        <p class="text-xs text-gray-300 text-right mt-4">Generado por MyPets 3.0 · ${new Date().toLocaleDateString('es-CL')}</p>
+      </div>
+
+      <div class="flex gap-3 pt-4 border-t border-gray-100 mt-4">
+        <button onclick="closeModal()" class="btn-secondary flex-1">Cerrar</button>
+        <button onclick="window.print()" class="btn-primary flex-1">🖨️ Imprimir / Guardar PDF</button>
+      </div>
+    </div>`);
+}
+
 // ---- RENDER ----
 function render() {
   const app = document.getElementById('app');
@@ -2832,6 +3575,45 @@ function loadDemoAndLogin() {
       { id: id(), title: 'Control anual + exámenes', type: 'Diagnóstico', date: dt(2025,3,20), doctor: 'Dra. Valentina Rojas', clinic: 'Clínica Vet. Las Condes', cost: 68000, notes: 'Hemograma y perfil bioquímico normales. Peso estable. Todo en orden.' },
       { id: id(), title: 'Control displasia + ecografía', type: 'Diagnóstico', date: dt(2026,1,8), doctor: 'Dra. Valentina Rojas', clinic: 'Clínica Vet. Las Condes', cost: 85000, notes: 'Leve progresión displasia. Se agrega gabapentina para manejo dolor crónico.' },
     ],
+    weightHistory: [
+      { date: dt(2026,1,15), kg: 12, gr: 200 }, { date: dt(2026,2,1), kg: 12, gr: 500 },
+      { date: dt(2026,2,15), kg: 12, gr: 800 }, { date: dt(2026,3,1), kg: 13, gr: 0 },
+      { date: dt(2026,3,15), kg: 12, gr: 900 }, { date: dt(2026,4,1), kg: 12, gr: 700 },
+      { date: dt(2026,4,15), kg: 12, gr: 600 }, { date: dt(2026,5,1), kg: 12, gr: 500 },
+      { date: dt(2026,5,12), kg: 12, gr: 400 },
+    ],
+    moodLog: [
+      { date: dt(2026,5,9), mood: 'great', notes: 'Muy activa en el parque' },
+      { date: dt(2026,5,10), mood: 'ok', notes: '' },
+      { date: dt(2026,5,11), mood: 'low', notes: 'Comió poco' },
+      { date: dt(2026,5,12), mood: 'ok', notes: 'Mejorando' },
+      { date: dt(2026,5,13), mood: 'great', notes: '' },
+      { date: dt(2026,5,14), mood: 'great', notes: 'Jugó toda la tarde' },
+    ],
+    symptomsLog: [
+      { date: dt(2026,5,11), symptoms: ['Sin apetito','Letargo'], notes: 'Posiblemente por el antibiótico' },
+      { date: dt(2026,5,9), symptoms: ['Rascado'], notes: 'Se rasca la pata derecha' },
+    ],
+    meals: [
+      { date: dt(2026,5,14), time: 'Mañana', type: 'Seco', amount: 120, unit: 'g', notes: 'Royal Canin Adult' },
+      { date: dt(2026,5,14), time: 'Noche', type: 'Seco', amount: 120, unit: 'g', notes: '' },
+      { date: dt(2026,5,13), time: 'Mañana', type: 'Seco', amount: 120, unit: 'g', notes: '' },
+      { date: dt(2026,5,13), time: 'Noche', type: 'Húmedo', amount: 100, unit: 'g', notes: 'Lata prémium' },
+    ],
+    activities: [
+      { date: dt(2026,5,14), type: 'Paseo', duration: 45, distance: 3.2, notes: 'Parque Las Lilas' },
+      { date: dt(2026,5,13), type: 'Juego', duration: 20, distance: null, notes: 'Pelota en el jardín' },
+      { date: dt(2026,5,12), type: 'Paseo', duration: 30, distance: 2.1, notes: '' },
+      { date: dt(2026,5,11), type: 'Paseo', duration: 25, distance: 1.8, notes: 'Día corto por lluvia' },
+      { date: dt(2026,5,10), type: 'Paseo', duration: 50, distance: 3.8, notes: '' },
+    ],
+    doseLog: [
+      { date: dt(2026,5,8), confirmed: true }, { date: dt(2026,5,9), confirmed: true },
+      { date: dt(2026,5,10), confirmed: true }, { date: dt(2026,5,11), confirmed: true },
+      { date: dt(2026,5,12), confirmed: true }, { date: dt(2026,5,13), confirmed: true },
+      { date: dt(2026,5,14), confirmed: true },
+    ],
+    bcs: 5,
   };
 
   const luna = {
@@ -2871,6 +3653,43 @@ function loadDemoAndLogin() {
       { id: id(), title: 'Infección urinaria', type: 'Diagnóstico', date: dt(2025,2,1), doctor: 'Dra. Valentina Rojas', clinic: 'Clínica Vet. Las Condes', cost: 55000, notes: 'Urocultivo positivo E. coli. Tratamiento antibiótico 10 días. Dieta húmeda.' },
       { id: id(), title: 'Control renal preventivo', type: 'Diagnóstico', date: dt(2026,3,1), doctor: 'Dra. Valentina Rojas', clinic: 'Clínica Vet. Las Condes', cost: 48000, notes: 'Creatinina y BUN dentro de rango normal. Ecografía renal sin hallazgos.' },
     ],
+    weightHistory: [
+      { date: dt(2026,1,15), kg: 3, gr: 600 }, { date: dt(2026,2,1), kg: 3, gr: 700 },
+      { date: dt(2026,2,15), kg: 3, gr: 750 }, { date: dt(2026,3,1), kg: 3, gr: 800 },
+      { date: dt(2026,3,15), kg: 3, gr: 800 }, { date: dt(2026,4,1), kg: 3, gr: 750 },
+      { date: dt(2026,4,15), kg: 3, gr: 700 }, { date: dt(2026,5,1), kg: 3, gr: 680 },
+      { date: dt(2026,5,12), kg: 3, gr: 650 },
+    ],
+    moodLog: [
+      { date: dt(2026,5,9), mood: 'ok', notes: 'Normal, durmió mucho' },
+      { date: dt(2026,5,10), mood: 'ok', notes: '' },
+      { date: dt(2026,5,11), mood: 'great', notes: 'Jugó con el ratón de peluche' },
+      { date: dt(2026,5,12), mood: 'ok', notes: '' },
+      { date: dt(2026,5,13), mood: 'great', notes: 'Muy activa' },
+      { date: dt(2026,5,14), mood: 'ok', notes: 'Tranquila' },
+    ],
+    symptomsLog: [
+      { date: dt(2026,5,10), symptoms: ['Estornudos'], notes: 'Algunos estornudos por la mañana' },
+    ],
+    meals: [
+      { date: dt(2026,5,14), time: 'Mañana', type: 'Seco', amount: 40, unit: 'g', notes: 'Royal Canin Siamese' },
+      { date: dt(2026,5,14), time: 'Noche', type: 'Húmedo', amount: 85, unit: 'g', notes: 'Lata sabor salmón' },
+      { date: dt(2026,5,13), time: 'Mañana', type: 'Seco', amount: 40, unit: 'g', notes: '' },
+      { date: dt(2026,5,13), time: 'Noche', type: 'Húmedo', amount: 85, unit: 'g', notes: '' },
+    ],
+    activities: [
+      { date: dt(2026,5,14), type: 'Juego', duration: 15, distance: null, notes: 'Ratón de peluche' },
+      { date: dt(2026,5,13), type: 'Juego', duration: 20, distance: null, notes: 'Pluma interactiva' },
+      { date: dt(2026,5,12), type: 'Juego', duration: 10, distance: null, notes: '' },
+      { date: dt(2026,5,11), type: 'Ejercicio', duration: 25, distance: null, notes: 'Persiguió el laser' },
+      { date: dt(2026,5,10), type: 'Juego', duration: 15, distance: null, notes: '' },
+    ],
+    doseLog: [
+      { date: dt(2026,5,10), confirmed: true }, { date: dt(2026,5,11), confirmed: true },
+      { date: dt(2026,5,12), confirmed: true }, { date: dt(2026,5,13), confirmed: true },
+      { date: dt(2026,5,14), confirmed: true },
+    ],
+    bcs: 4,
   };
 
   const coco = {
@@ -2902,6 +3721,30 @@ function loadDemoAndLogin() {
       { id: id(), title: 'Control bienestar + corte uñas', type: 'Procedimiento', date: dt(2025,1,20), doctor: 'Dr. Rodrigo Méndez', clinic: 'Exotic Pets Vet', cost: 22000, notes: 'Todo en orden. Peso ideal. Se realizó corte de uñas y revisión dental.' },
       { id: id(), title: 'Control general 1 año', type: 'Diagnóstico', date: dt(2025,11,5), doctor: 'Dr. Rodrigo Méndez', clinic: 'Exotic Pets Vet', cost: 28000, notes: 'Primer año de vida sin incidentes. Buen desarrollo. Dieta correcta.' },
     ],
+    weightHistory: [
+      { date: dt(2026,1,15), kg: 1, gr: 150 }, { date: dt(2026,2,1), kg: 1, gr: 180 },
+      { date: dt(2026,2,15), kg: 1, gr: 200 }, { date: dt(2026,3,1), kg: 1, gr: 210 },
+      { date: dt(2026,3,15), kg: 1, gr: 220 }, { date: dt(2026,4,1), kg: 1, gr: 200 },
+      { date: dt(2026,5,1), kg: 1, gr: 190 }, { date: dt(2026,5,12), kg: 1, gr: 180 },
+    ],
+    moodLog: [
+      { date: dt(2026,5,12), mood: 'great', notes: 'Corrió por toda la habitación' },
+      { date: dt(2026,5,13), mood: 'ok', notes: '' },
+      { date: dt(2026,5,14), mood: 'great', notes: 'Comió bien todos sus pellets' },
+    ],
+    symptomsLog: [],
+    meals: [
+      { date: dt(2026,5,14), time: 'Mañana', type: 'Seco', amount: 30, unit: 'g', notes: 'Pellets + heno Timothy' },
+      { date: dt(2026,5,14), time: 'Noche', type: 'Casero', amount: 1, unit: 'porción', notes: 'Zanahoria y perejil' },
+      { date: dt(2026,5,13), time: 'Mañana', type: 'Seco', amount: 30, unit: 'g', notes: '' },
+    ],
+    activities: [
+      { date: dt(2026,5,14), type: 'Juego', duration: 30, distance: null, notes: 'Hora libre en la sala' },
+      { date: dt(2026,5,13), type: 'Juego', duration: 20, distance: null, notes: 'Exploró la terraza' },
+      { date: dt(2026,5,12), type: 'Juego', duration: 25, distance: null, notes: 'Corrió y saltó mucho' },
+    ],
+    doseLog: [],
+    bcs: 5,
   };
 
   // Construir gastos a partir de todos los registros
