@@ -189,11 +189,12 @@ async function loadDataFromSupabase() {
         id: pid,
         name: pet.name, species: pet.species, breed: pet.breed,
         dateOfBirth: pet.date_of_birth, sex: pet.sex, color: pet.color,
-        sizeRange: pet.size_range, weightKg: pet.weight_kg, weightGr: pet.weight_gr,
-        reproductiveStatus: pet.reproductive_status, chipNumber: pet.chip_number,
-        activityLevel: pet.activity_level || 2, personalityTags: pet.personality_tags || [],
-        allergies: pet.allergies || [], chronicConditions: pet.chronic_conditions || [],
-        avatar: pet.avatar, vet: pet.vet || {}, tutor2: pet.tutor2 || null,
+        reproductiveStatus: pet.reproductive_status, chipNumber: pet.microchip,
+        personalityTags: pet.personality_tags || [],
+        avatar: pet.avatar_emoji || '',
+        vet: { name: pet.vet_name||'', clinic: pet.vet_clinic||'', phone: pet.vet_phone||'', email: pet.vet_email||'' },
+        weightKg: '', weightGr: '', sizeRange: '', activityLevel: 2,
+        allergies: [], chronicConditions: [], tutor2: null,
         vaccines: vacc.filter(v => v.pet_id === pid).map(v => ({
           id: v.id, name: v.name, code: v.code, date: v.date, periodicity: v.periodicity,
           nextDate: v.next_date, alertType: v.alert_type, alertDays: v.alert_days, cost: v.cost })),
@@ -2383,12 +2384,12 @@ async function savePet() {
   const petData = {
     owner_id: state.user.id,
     name: d.name, species: d.species, breed: d.breed,
-    date_of_birth: d.dateOfBirth, sex: d.sex, color: d.color,
-    size_range: d.sizeRange, weight_kg: d.weightKg, weight_gr: d.weightGr,
-    reproductive_status: d.reproductiveStatus, chip_number: d.chipNumber,
-    personality_tags: d.personalityTags || [], allergies: d.allergies || [],
-    chronic_conditions: d.chronicConditions || [], activity_level: d.activityLevel || 2,
-    avatar: d.avatar, vet: d.vet || {}, tutor2: d.tutor2 || null,
+    date_of_birth: d.dateOfBirth || null, sex: d.sex, color: d.color,
+    reproductive_status: d.reproductiveStatus, microchip: d.chipNumber,
+    personality_tags: d.personalityTags || [],
+    avatar_emoji: d.avatar || '',
+    vet_name: d.vet?.name || '', vet_clinic: d.vet?.clinic || '',
+    vet_phone: d.vet?.phone || '', vet_email: d.vet?.email || '',
   };
   const { data: petRow, error } = await sb.from('pets').insert(petData).select().single();
   if (error) { showToast('Error al guardar mascota', 'error'); console.error(error); return; }
@@ -2501,10 +2502,10 @@ async function saveEditPet(petId) {
   const weightKg = g('ep-wkg');
   const dateOfBirth = g('ep-dob');
   const { error } = await sb.from('pets').update({
-    name, species, breed, weight_kg: weightKg, date_of_birth: dateOfBirth
+    name, species, breed, date_of_birth: dateOfBirth || null
   }).eq('id', petId);
   if (error) { showToast('Error al guardar', 'error'); return; }
-  Object.assign(p, { name, species, breed, weightKg, dateOfBirth });
+  Object.assign(p, { name, species, breed, dateOfBirth });
   closeModal(); render();
   showToast('Cambios guardados', 'success');
 }
