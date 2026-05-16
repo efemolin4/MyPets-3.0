@@ -121,7 +121,8 @@ function loadState() {
     const s = localStorage.getItem('mypets_v3');
     if (s) {
       const p = JSON.parse(s);
-      Object.assign(state, p);
+      state.user = p.user || null;
+      state.isLoggedIn = p.isLoggedIn || false;
       state.currentView = p.isLoggedIn ? 'dashboard' : 'login';
       state.currentTab = 'general'; state.addPetStep = 1; state.newPetData = {};
     }
@@ -145,9 +146,102 @@ function saveState() {
   try {
     localStorage.setItem('mypets_v3', JSON.stringify({
       user: state.user, isLoggedIn: state.isLoggedIn,
-      pets: state.pets, events: state.events, expenses: state.expenses,
     }));
   } catch(e) {}
+}
+
+async function loadDataFromSupabase() {
+  if (!state.user?.id) return;
+  try {
+    const { data: accessRows } = await sb.from('pet_access')
+      .select('pet_id, role, pets(*)')
+      .eq('user_id', state.user.id);
+
+    if (!accessRows || accessRows.length === 0) { state.pets = []; state.events = []; state.expenses = []; return; }
+
+    const petIds = accessRows.map(r => r.pet_id);
+
+    const [vaccRes, dewRes, medRes, histRes, wRes, moodRes, symRes, mealRes, actRes, doseRes, evRes, expRes, botRes] = await Promise.all([
+      sb.from('vaccines').select('*').in('pet_id', petIds),
+      sb.from('dewormings').select('*').in('pet_id', petIds),
+      sb.from('medications').select('*').in('pet_id', petIds),
+      sb.from('clinical_history').select('*').in('pet_id', petIds),
+      sb.from('weight_history').select('*').in('pet_id', petIds),
+      sb.from('mood_log').select('*').in('pet_id', petIds),
+      sb.from('symptoms_log').select('*').in('pet_id', petIds),
+      sb.from('meals').select('*').in('pet_id', petIds),
+      sb.from('activities').select('*').in('pet_id', petIds),
+      sb.from('dose_log').select('*').in('pet_id', petIds),
+      sb.from('events').select('*').eq('user_id', state.user.id),
+      sb.from('expenses').select('*').eq('user_id', state.user.id),
+      sb.from('botiquin').select('*').eq('user_id', state.user.id),
+    ]);
+
+    const vacc = vaccRes.data || [], dew = dewRes.data || [], med = medRes.data || [];
+    const hist = histRes.data || [], wh = wRes.data || [], mood = moodRes.data || [];
+    const sym = symRes.data || [], meal = mealRes.data || [], act = actRes.data || [];
+    const dose = doseRes.data || [];
+
+    state.pets = accessRows.map(row => {
+      const pet = row.pets;
+      const pid = pet.id;
+      return {
+        id: pid,
+        name: pet.name, species: pet.species, breed: pet.breed,
+        dateOfBirth: pet.date_of_birth, sex: pet.sex, color: pet.color,
+        sizeRange: pet.size_range, weightKg: pet.weight_kg, weightGr: pet.weight_gr,
+        reproductiveStatus: pet.reproductive_status, chipNumber: pet.chip_number,
+        activityLevel: pet.activity_level || 2, personalityTags: pet.personality_tags || [],
+        allergies: pet.allergies || [], chronicConditions: pet.chronic_conditions || [],
+        avatar: pet.avatar, vet: pet.vet || {}, tutor2: pet.tutor2 || null,
+        vaccines: vacc.filter(v => v.pet_id === pid).map(v => ({
+          id: v.id, name: v.name, code: v.code, date: v.date, periodicity: v.periodicity,
+          nextDate: v.next_date, alertType: v.alert_type, alertDays: v.alert_days, cost: v.cost })),
+        deworming: dew.filter(d => d.pet_id === pid).map(d => ({
+          id: d.id, product: d.product, dose: d.dose, date: d.date, periodicity: d.periodicity,
+          nextDate: d.next_date, alertType: d.alert_type, alertDays: d.alert_days, cost: d.cost })),
+        medications: med.filter(m => m.pet_id === pid).map(m => ({
+          id: m.id, medication: m.medication, dose: m.dose, unit: m.unit,
+          frequency: m.frequency, freqUnit: m.freq_unit, startDate: m.start_date,
+          startTime: m.start_time, durationDays: m.duration_days, stockQty: m.stock_qty,
+          stockUnit: m.stock_unit, stockExpiry: m.stock_expiry, reminderMin: m.reminder_min, notes: m.notes })),
+        clinicalHistory: hist.filter(h => h.pet_id === pid).map(h => ({
+          id: h.id, title: h.title, type: h.type, date: h.date,
+          doctor: h.doctor, clinic: h.clinic, cost: h.cost, notes: h.notes })),
+        weightHistory: wh.filter(w => w.pet_id === pid).map(w => ({
+          id: w.id, date: w.date, kg: w.kg, gr: w.gr, notes: w.notes })),
+        moodLog: mood.filter(m => m.pet_id === pid).map(m => ({
+          id: m.id, date: m.date, mood: m.mood, energy: m.energy, notes: m.notes })),
+        symptomsLog: sym.filter(s => s.pet_id === pid).map(s => ({
+          id: s.id, date: s.date, symptoms: s.symptoms, severity: s.severity, notes: s.notes })),
+        meals: meal.filter(m => m.pet_id === pid).map(m => ({
+          id: m.id, date: m.date, time: m.time, food: m.food,
+          portion: m.portion, portionUnit: m.portion_unit, notes: m.notes })),
+        activities: act.filter(a => a.pet_id === pid).map(a => ({
+          id: a.id, date: a.date, type: a.type, duration: a.duration, notes: a.notes })),
+        doseLog: dose.filter(d => d.pet_id === pid).map(d => ({
+          id: d.id, medicationId: d.medication_id, date: d.date, time: d.time, given: d.given })),
+      };
+    });
+
+    state.events = (evRes.data || []).map(e => ({
+      id: e.id, title: e.title, date: e.date, time: e.time,
+      type: e.type, petId: e.pet_id, notes: e.notes }));
+
+    state.expenses = (expRes.data || []).map(e => ({
+      id: e.id, petId: e.pet_id, date: e.date, category: e.category,
+      amount: e.amount, description: e.description }));
+
+    // store botiquin separately (not inside pet objects)
+    state.botiquin = (botRes.data || []).map(b => ({
+      id: b.id, petId: b.pet_id, name: b.name, category: b.category,
+      quantity: b.quantity, unit: b.unit, expiryDate: b.expiry_date,
+      notes: b.notes, status: b.status }));
+
+  } catch(err) {
+    console.error('Error loading from Supabase:', err);
+    showToast('Error al cargar datos', 'error');
+  }
 }
 
 // ---- UTILIDADES ----
@@ -2178,6 +2272,7 @@ async function login() {
   state.user = { name: userName, email, id: data.user.id };
   state.isLoggedIn = true;
   saveState();
+  await loadDataFromSupabase();
   showToast('¡Bienvenido! 👋', 'success');
   navigate('dashboard');
 }
@@ -2211,6 +2306,7 @@ async function register() {
   state.isLoggedIn = true;
   state.pets = []; state.events = []; state.expenses = [];
   saveState();
+  await loadDataFromSupabase();
   showToast('¡Cuenta creada! Bienvenido 🎉', 'success');
   navigate('dashboard');
 }
@@ -2280,19 +2376,32 @@ function collectStepData() {
   }
 }
 
-function savePet() {
+async function savePet() {
   const d = state.newPetData;
   if (!d.name) { showToast('El nombre es requerido', 'error'); state.addPetStep = 1; render(); return; }
+  showToast('Guardando...', '');
+  const petData = {
+    owner_id: state.user.id,
+    name: d.name, species: d.species, breed: d.breed,
+    date_of_birth: d.dateOfBirth, sex: d.sex, color: d.color,
+    size_range: d.sizeRange, weight_kg: d.weightKg, weight_gr: d.weightGr,
+    reproductive_status: d.reproductiveStatus, chip_number: d.chipNumber,
+    personality_tags: d.personalityTags || [], allergies: d.allergies || [],
+    chronic_conditions: d.chronicConditions || [], activity_level: d.activityLevel || 2,
+    avatar: d.avatar, vet: d.vet || {}, tutor2: d.tutor2 || null,
+  };
+  const { data: petRow, error } = await sb.from('pets').insert(petData).select().single();
+  if (error) { showToast('Error al guardar mascota', 'error'); console.error(error); return; }
+  await sb.from('pet_access').insert({ pet_id: petRow.id, user_id: state.user.id, role: 'owner' });
   const pet = {
-    id: genId(), ...d,
+    ...d, id: petRow.id,
     vaccines: [], deworming: [], medications: [], clinicalHistory: [],
     personalityTags: d.personalityTags || [], allergies: d.allergies || [],
-    activityLevel: d.activityLevel || 2,
+    chronicConditions: d.chronicConditions || [], activityLevel: d.activityLevel || 2,
     weightHistory: [], moodLog: [], symptomsLog: [], meals: [], activities: [], doseLog: [],
   };
   state.pets.push(pet);
   state.newPetData = {}; state.addPetStep = 1;
-  saveState();
   showToast(`🐾 ${pet.name} registrado con éxito!`, 'success');
   navigate('petProfile', { currentPetId: pet.id, currentTab: 'general' });
 }
@@ -2365,117 +2474,126 @@ function verifyDeleteCode(petId) {
 
 function confirmDeletePet(petId) { openDeletePetWithCode(petId); }
 
-function deletePet(petId) {
+async function deletePet(petId) {
   const pet = state.pets.find(p => p.id === petId);
   const hasTwoTutors = pet?.tutor2?.name;
   if (hasTwoTutors) {
-    // Solo remover al tutor actual — mantener la mascota para el otro tutor
+    await sb.from('pets').update({ tutor2: null }).eq('id', petId);
     pet.tutor2 = null;
     showToast(`${pet.name} eliminada de tu perfil`, 'success');
   } else {
+    const { error } = await sb.from('pets').delete().eq('id', petId);
+    if (error) { showToast('Error al eliminar', 'error'); return; }
     state.pets = state.pets.filter(p => p.id !== petId);
     showToast(`${pet?.name} eliminada`, 'error');
   }
   state.deleteCode = null; state.deletePetId = null;
-  saveState(); closeModal(); navigate('pets');
+  closeModal(); navigate('pets');
 }
 
-function saveEditPet(petId) {
+async function saveEditPet(petId) {
   const p = state.pets.find(x => x.id === petId);
   if (!p) return;
   const g = id => document.getElementById(id)?.value;
-  p.name = g('ep-name') || p.name; p.species = g('ep-species') || p.species;
-  p.breed = g('ep-breed'); p.weightKg = g('ep-wkg'); p.dateOfBirth = g('ep-dob');
-  saveState(); closeModal(); render();
+  const name = g('ep-name') || p.name;
+  const species = g('ep-species') || p.species;
+  const breed = g('ep-breed');
+  const weightKg = g('ep-wkg');
+  const dateOfBirth = g('ep-dob');
+  const { error } = await sb.from('pets').update({
+    name, species, breed, weight_kg: weightKg, date_of_birth: dateOfBirth
+  }).eq('id', petId);
+  if (error) { showToast('Error al guardar', 'error'); return; }
+  Object.assign(p, { name, species, breed, weightKg, dateOfBirth });
+  closeModal(); render();
   showToast('Cambios guardados', 'success');
 }
 
-function saveVaccine(e, petId) {
+async function saveVaccine(e, petId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
   const date = g('v-date'), period = g('v-period');
-  const v = { id: genId(), name: g('v-name'), code: g('v-code'), date, periodicity: period,
-    nextDate: period ? addMonths(date, parseInt(period)) : '',
-    alertType: g('v-alert'), alertDays: g('v-alert-days'), cost: g('v-cost') };
+  const { data, error } = await sb.from('vaccines').insert({
+    pet_id: petId, name: g('v-name'), code: g('v-code'), date,
+    periodicity: period, next_date: period ? addMonths(date, parseInt(period)) : '',
+    alert_type: g('v-alert'), alert_days: g('v-alert-days'), cost: g('v-cost')
+  }).select().single();
+  if (error) { showToast('Error al guardar vacuna', 'error'); return; }
   pet.vaccines = pet.vaccines || [];
-  pet.vaccines.push(v);
-  if (v.cost) { state.expenses.push({ id: genId(), description: `Vacuna ${v.name} - ${pet.name}`, amount: v.cost, date, category: 'Veterinaria', pet: pet.name }); }
-  saveState(); closeModal(); render();
-  showToast('Vacuna registrada ✓', 'success');
+  pet.vaccines.push({ id: data.id, name: data.name, code: data.code, date: data.date,
+    periodicity: data.periodicity, nextDate: data.next_date,
+    alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
+  closeModal(); render();
+  showToast('Vacuna guardada ✅', 'success');
 }
 
-function deleteVaccine(petId, vId) {
+async function deleteVaccine(petId, vId) {
   const pet = state.pets.find(p => p.id === petId);
-  if (pet) { pet.vaccines = pet.vaccines.filter(v => v.id !== vId); saveState(); render(); }
+  await sb.from('vaccines').delete().eq('id', vId);
+  if (pet) { pet.vaccines = pet.vaccines.filter(v => v.id !== vId); render(); }
 }
 
-function saveDeworming(e, petId) {
+async function saveDeworming(e, petId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
   const date = g('d-date'), period = g('d-period');
-  const fmt = g('d-format');
-  const unitMap = { Comprimido:'Comprimido(s)', Pipeta:'ML', Collar:'Unidad(es)', Spray:'ML', Jarabe:'ML', Inyección:'ML' };
-  const d = { id: genId(), product: g('d-product'), type: g('d-type'), format: fmt,
-    dose: g('d-dose'), unit: unitMap[fmt] || '', date,
-    nextDate: period ? addMonths(date, parseInt(period)) : '',
-    alertType: g('d-alert'), alertDays: g('d-alert-days'), cost: g('d-cost') };
+  const { data, error } = await sb.from('dewormings').insert({
+    pet_id: petId, product: g('d-product'), dose: g('d-dose'), date,
+    periodicity: period, next_date: period ? addMonths(date, parseInt(period)) : '',
+    alert_type: g('d-alert'), alert_days: g('d-alert-days'), cost: g('d-cost')
+  }).select().single();
+  if (error) { showToast('Error al guardar desparasitación', 'error'); return; }
   pet.deworming = pet.deworming || [];
-  pet.deworming.push(d);
-  if (d.cost) {
-    state.expenses.push({ id: genId(), description: `Desparasitación ${d.product} - ${pet.name}`,
-      amount: d.cost, date, category: 'Veterinaria', pet: pet.name });
-  }
-  saveState(); closeModal(); render();
-  showToast('Desparasitación registrada ✓', 'success');
+  pet.deworming.push({ id: data.id, product: data.product, dose: data.dose, date: data.date,
+    periodicity: data.periodicity, nextDate: data.next_date,
+    alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
+  closeModal(); render();
+  showToast('Desparasitación guardada ✅', 'success');
 }
 
-function deleteDeworming(petId, dId) {
+async function deleteDeworming(petId, dId) {
   const pet = state.pets.find(p => p.id === petId);
-  if (pet) { pet.deworming = pet.deworming.filter(d => d.id !== dId); saveState(); render(); }
+  await sb.from('dewormings').delete().eq('id', dId);
+  if (pet) { pet.deworming = pet.deworming.filter(d => d.id !== dId); render(); }
 }
 
-function saveMedication(e, petId) {
+async function saveMedication(e, petId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const freqN = g('m-freq-n'), freqUnit = g('m-freq-unit');
-  const days = parseInt(g('m-days') || 0);
-  const startDate = g('m-start');
-  let endDate = '';
-  if (days && startDate) {
-    const d = new Date(startDate + 'T12:00:00');
-    d.setDate(d.getDate() + days);
-    endDate = d.toISOString().slice(0,10);
-  }
-  const m = {
-    id: genId(), name: g('m-name'),
-    doseVal: g('m-dose-val'), doseUnit: g('m-unit'),
-    dose: `${g('m-dose-val')} ${g('m-unit')}`,
-    freqN, freqUnit, frequency: `Cada ${freqN} ${freqUnit}`,
-    startDate, startTime: g('m-start-time'), treatmentDays: days, endDate,
-    stockTotal: g('m-stock-total'), stockUnit: g('m-stock-unit'), expiry: g('m-expiry'),
-    cost: g('m-cost'),
-    active: document.getElementById('m-active')?.checked,
-    reminder: g('m-reminder') || 'exact',
-  };
+  const freq = g('m-freq'), freqUnit = g('m-freq-unit');
+  const startDate = g('m-start-date'), startTime = g('m-start-time');
+  const durationDays = g('m-days');
+  const { data, error } = await sb.from('medications').insert({
+    pet_id: petId,
+    medication: g('m-name'), dose: g('m-dose'), unit: g('m-unit'),
+    frequency: freq, freq_unit: freqUnit,
+    start_date: startDate, start_time: startTime, duration_days: durationDays,
+    stock_qty: g('m-stock-qty'), stock_unit: g('m-stock-unit'), stock_expiry: g('m-stock-expiry'),
+    reminder_min: g('m-reminder'), notes: g('m-notes')
+  }).select().single();
+  if (error) { showToast('Error al guardar medicamento', 'error'); return; }
   pet.medications = pet.medications || [];
-  pet.medications.push(m);
-  if (m.cost) {
-    state.expenses.push({ id: genId(), description: `Medicamento ${m.name} - ${pet.name}`,
-      amount: m.cost, date: startDate, category: 'Medicamentos', pet: pet.name });
-  }
-  saveState(); closeModal(); render();
-  showToast('Medicamento registrado ✓', 'success');
+  pet.medications.push({
+    id: data.id, medication: data.medication, dose: data.dose, unit: data.unit,
+    frequency: data.frequency, freqUnit: data.freq_unit,
+    startDate: data.start_date, startTime: data.start_time, durationDays: data.duration_days,
+    stockQty: data.stock_qty, stockUnit: data.stock_unit, stockExpiry: data.stock_expiry,
+    reminderMin: data.reminder_min, notes: data.notes
+  });
+  closeModal(); render();
+  showToast('Medicamento guardado ✅', 'success');
 }
 
-function deleteMedication(petId, mId) {
+async function deleteMedication(petId, mId) {
   const pet = state.pets.find(p => p.id === petId);
-  if (pet) { pet.medications = pet.medications.filter(m => m.id !== mId); saveState(); render(); }
+  await sb.from('medications').delete().eq('id', mId);
+  if (pet) { pet.medications = pet.medications.filter(m => m.id !== mId); render(); }
 }
 
 function previewHistoryFiles(input) {
@@ -2506,46 +2624,64 @@ async function saveHistory(e, petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const filesInput = document.getElementById('h-files');
-  const files = filesInput?.files?.length ? await readFilesAsBase64(filesInput) : [];
-  const h = { id: genId(), title: g('h-title'), type: g('h-type'), date: g('h-date'),
-    doctor: g('h-doctor'), clinic: g('h-clinic'), cost: g('h-cost'), notes: g('h-notes'), files };
+  const { data, error } = await sb.from('clinical_history').insert({
+    pet_id: petId, title: g('h-title'), type: g('h-type'), date: g('h-date'),
+    doctor: g('h-doctor'), clinic: g('h-clinic'), cost: g('h-cost'), notes: g('h-notes')
+  }).select().single();
+  if (error) { showToast('Error al guardar', 'error'); return; }
   pet.clinicalHistory = pet.clinicalHistory || [];
-  pet.clinicalHistory.push(h);
-  if (h.cost) { state.expenses.push({ id: genId(), description: `${h.title} - ${pet.name}`, amount: h.cost, date: h.date, category: 'Veterinaria', pet: pet.name }); }
-  saveState(); closeModal(); render();
-  showToast('Evento clínico registrado ✓', 'success');
+  pet.clinicalHistory.push({ id: data.id, title: data.title, type: data.type, date: data.date,
+    doctor: data.doctor, clinic: data.clinic, cost: data.cost, notes: data.notes });
+  closeModal(); render();
+  showToast('Registro guardado ✅', 'success');
 }
 
-function deleteHistory(petId, hId) {
+async function deleteHistory(petId, hId) {
   const pet = state.pets.find(p => p.id === petId);
-  if (pet) { pet.clinicalHistory = pet.clinicalHistory.filter(h => h.id !== hId); saveState(); render(); }
+  await sb.from('clinical_history').delete().eq('id', hId);
+  if (pet) { pet.clinicalHistory = pet.clinicalHistory.filter(h => h.id !== hId); render(); }
 }
 
-function saveEvent(e) {
+async function saveEvent(e) {
   e.preventDefault();
   const g = id => document.getElementById(id)?.value;
-  state.events = state.events || [];
-  state.events.push({ id: genId(), title: g('ev-title'), type: g('ev-type'), date: g('ev-date'), pet: g('ev-pet'), notes: g('ev-notes') });
-  saveState(); closeModal(); render();
-  showToast('Evento agendado ✓', 'success');
+  const { data, error } = await sb.from('events').insert({
+    user_id: state.user.id,
+    pet_id: g('ev-pet') || null,
+    title: g('ev-title'), date: g('ev-date'), time: g('ev-time'),
+    type: g('ev-type'), notes: g('ev-notes')
+  }).select().single();
+  if (error) { showToast('Error al guardar evento', 'error'); return; }
+  state.events.push({ id: data.id, title: data.title, date: data.date, time: data.time,
+    type: data.type, petId: data.pet_id, notes: data.notes });
+  closeModal(); render();
+  showToast('Evento guardado ✅', 'success');
 }
 
-function deleteEvent(id) {
-  state.events = state.events.filter(e => e.id !== id); saveState(); render();
+async function deleteEvent(id) {
+  await sb.from('events').delete().eq('id', id);
+  state.events = state.events.filter(e => e.id !== id); render();
 }
 
-function saveExpense(e) {
+async function saveExpense(e) {
   e.preventDefault();
   const g = id => document.getElementById(id)?.value;
-  state.expenses = state.expenses || [];
-  state.expenses.push({ id: genId(), description: g('ex-desc'), amount: g('ex-amount'), date: g('ex-date'), category: g('ex-cat'), pet: g('ex-pet'), tutor: state.user?.name || '' });
-  saveState(); closeModal(); render();
-  showToast('Gasto registrado ✓', 'success');
+  const { data, error } = await sb.from('expenses').insert({
+    user_id: state.user.id,
+    pet_id: g('ex-pet') || null,
+    date: g('ex-date'), category: g('ex-cat'),
+    amount: g('ex-amount'), description: g('ex-desc')
+  }).select().single();
+  if (error) { showToast('Error al guardar gasto', 'error'); return; }
+  state.expenses.push({ id: data.id, petId: data.pet_id, date: data.date,
+    category: data.category, amount: data.amount, description: data.description });
+  closeModal(); render();
+  showToast('Gasto guardado ✅', 'success');
 }
 
-function deleteExpense(id) {
-  state.expenses = state.expenses.filter(e => e.id !== id); saveState(); render();
+async function deleteExpense(id) {
+  await sb.from('expenses').delete().eq('id', id);
+  state.expenses = state.expenses.filter(e => e.id !== id); render();
 }
 
 function prevMonth() {
@@ -3212,15 +3348,22 @@ function openWeightModal(petId) {
     </div>`);
 }
 
-function saveWeight(e, petId) {
+async function saveWeight(e, petId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
+  const kg = parseFloat(g('wt-kg') || 0);
+  const gr = parseInt(g('wt-gr') || 0);
+  const date = g('wt-date');
+  const { data, error } = await sb.from('weight_history').insert({
+    pet_id: petId, date, kg, gr
+  }).select().single();
+  if (error) { showToast('Error al guardar peso', 'error'); return; }
   pet.weightHistory = pet.weightHistory || [];
-  pet.weightHistory.push({ date: g('wt-date'), kg: parseFloat(g('wt-kg')||0), gr: parseInt(g('wt-gr')||0) });
-  pet.weightHistory.sort((a,b) => a.date > b.date ? 1 : -1);
-  saveState(); closeModal(); render();
+  pet.weightHistory.push({ id: data.id, date: data.date, kg: data.kg, gr: data.gr, notes: data.notes });
+  pet.weightHistory.sort((a, b) => a.date > b.date ? 1 : -1);
+  closeModal(); render();
   showToast('Peso registrado ✓', 'success');
 }
 
@@ -3266,16 +3409,25 @@ function selectMood(val) {
   });
 }
 
-function saveMood(petId) {
+async function saveMood(petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const mood = document.getElementById('mood-val')?.value;
   if (!mood) { showToast('Selecciona un estado de ánimo', 'error'); return; }
   const notes = document.getElementById('mood-notes')?.value || '';
   const today = new Date().toISOString().slice(0, 10);
+  // Remove existing entry for today if any, then insert new one
+  const existing = (pet.moodLog || []).find(m => m.date === today);
+  if (existing?.id) {
+    await sb.from('mood_log').delete().eq('id', existing.id);
+  }
+  const { data, error } = await sb.from('mood_log').insert({
+    pet_id: petId, date: today, mood, notes
+  }).select().single();
+  if (error) { showToast('Error al guardar estado de ánimo', 'error'); return; }
   pet.moodLog = (pet.moodLog || []).filter(m => m.date !== today);
-  pet.moodLog.push({ date: today, mood, notes });
-  saveState(); closeModal(); render();
+  pet.moodLog.push({ id: data.id, date: data.date, mood: data.mood, energy: data.energy, notes: data.notes });
+  closeModal(); render();
   showToast('Estado de ánimo registrado ✓', 'success');
 }
 
@@ -3322,16 +3474,20 @@ function toggleSymptomTag(btn, tag) {
   btn.classList.toggle('border-gray-200');
 }
 
-function saveSymptoms(petId) {
+async function saveSymptoms(petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const selected = [...document.querySelectorAll('#sym-tags button.border-brand-500')].map(b => b.dataset.tag);
   if (!selected.length) { showToast('Selecciona al menos un síntoma', 'error'); return; }
   const date = document.getElementById('sym-date')?.value;
   const notes = document.getElementById('sym-notes')?.value || '';
+  const { data, error } = await sb.from('symptoms_log').insert({
+    pet_id: petId, date, symptoms: selected, notes
+  }).select().single();
+  if (error) { showToast('Error al guardar síntomas', 'error'); return; }
   pet.symptomsLog = pet.symptomsLog || [];
-  pet.symptomsLog.push({ date, symptoms: selected, notes });
-  saveState(); closeModal(); render();
+  pet.symptomsLog.push({ id: data.id, date: data.date, symptoms: data.symptoms, severity: data.severity, notes: data.notes });
+  closeModal(); render();
   showToast('Síntomas registrados ✓', 'success');
 }
 
@@ -3384,14 +3540,21 @@ function openMealModal(petId) {
     </div>`);
 }
 
-function saveMeal(e, petId) {
+async function saveMeal(e, petId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
+  const { data, error } = await sb.from('meals').insert({
+    pet_id: petId, date: g('ml-date'), time: g('ml-time'),
+    food: g('ml-type'), portion: parseFloat(g('ml-amount') || 0),
+    portion_unit: g('ml-unit'), notes: g('ml-notes')
+  }).select().single();
+  if (error) { showToast('Error al guardar comida', 'error'); return; }
   pet.meals = pet.meals || [];
-  pet.meals.push({ date: g('ml-date'), time: g('ml-time'), type: g('ml-type'), amount: parseFloat(g('ml-amount')||0), unit: g('ml-unit'), notes: g('ml-notes') });
-  saveState(); closeModal(); render();
+  pet.meals.push({ id: data.id, date: data.date, time: data.time, food: data.food,
+    portion: data.portion, portionUnit: data.portion_unit, notes: data.notes });
+  closeModal(); render();
   showToast('Comida registrada ✓', 'success');
 }
 
@@ -3436,15 +3599,19 @@ function openActivityModal(petId) {
     </div>`);
 }
 
-function saveActivity(e, petId) {
+async function saveActivity(e, petId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
+  const { data, error } = await sb.from('activities').insert({
+    pet_id: petId, date: g('ac-date'), type: g('ac-type'),
+    duration: parseInt(g('ac-duration') || 0), notes: g('ac-notes')
+  }).select().single();
+  if (error) { showToast('Error al guardar actividad', 'error'); return; }
   pet.activities = pet.activities || [];
-  const dist = parseFloat(g('ac-distance'));
-  pet.activities.push({ date: g('ac-date'), type: g('ac-type'), duration: parseInt(g('ac-duration')||0), distance: isNaN(dist) ? null : dist, notes: g('ac-notes') });
-  saveState(); closeModal(); render();
+  pet.activities.push({ id: data.id, date: data.date, type: data.type, duration: data.duration, notes: data.notes });
+  closeModal(); render();
   showToast('Actividad registrada ✓', 'success');
 }
 
@@ -4255,6 +4422,7 @@ async function initApp() {
     if (!state.currentView || state.currentView === 'login') {
       state.currentView = 'dashboard';
     }
+    await loadDataFromSupabase();
   }
 
   // Listen for auth changes (token refresh, sign out from another tab)
