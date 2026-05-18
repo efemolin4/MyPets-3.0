@@ -239,9 +239,34 @@ async function loadDataFromSupabase() {
       quantity: b.quantity, unit: b.unit, expiryDate: b.expiry_date,
       notes: b.notes, status: b.status }));
 
+    // Fetch user profile (for is_admin flag)
+    const { data: profile } = await sb.from('profiles').select('is_admin, plan').eq('id', state.user.id).single();
+    if (profile) {
+      state.user.isAdmin = profile.is_admin || false;
+      state.user.plan = profile.plan || 'free';
+      saveState();
+    }
+
   } catch(err) {
     console.error('Error loading from Supabase:', err);
     showToast('Error al cargar datos', 'error');
+  }
+}
+
+// ---- ADMIN: cargar todos los datos ----
+async function loadAdminData() {
+  if (!state.user?.isAdmin) return;
+  try {
+    const [profilesRes, petsRes] = await Promise.all([
+      sb.from('profiles').select('*').order('created_at', { ascending: false }),
+      sb.from('pets').select('id, owner_id, species, created_at'),
+    ]);
+    state.adminData = {
+      profiles: profilesRes.data || [],
+      pets: petsRes.data || [],
+    };
+  } catch(err) {
+    console.error('Admin data error:', err);
   }
 }
 
@@ -301,6 +326,7 @@ function iconSVG(name) {
     finance: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>`,
     kit:     `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>`,
     logout:  `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>`,
+    admin:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>`,
   };
   return icons[name] || '';
 }
@@ -312,8 +338,9 @@ function sidebar() {
     { v:'calendar',  icon:'📅', label:'Agenda' },
     { v:'finance',   icon:'💰', label:'Finanzas' },
     { v:'botiquin',  icon:'🧴', label:'Botiquín' },
+    ...(state.user?.isAdmin ? [{ v:'admin', icon:'⚙️', label:'Admin' }] : []),
   ];
-  const navIcons = { dashboard:'home', pets:'paw', calendar:'calendar', finance:'finance', botiquin:'kit' };
+  const navIcons = { dashboard:'home', pets:'paw', calendar:'calendar', finance:'finance', botiquin:'kit', admin:'admin' };
   return `
   <aside class="hidden md:flex flex-col w-60 bg-white border-r border-gray-100 fixed inset-y-0 left-0 z-20">
     <div class="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
@@ -3700,6 +3727,7 @@ function render() {
   else if (v === 'calendar')      app.innerHTML = viewCalendar();
   else if (v === 'finance')       app.innerHTML = viewFinance();
   else if (v === 'botiquin')      app.innerHTML = viewBotiquin();
+  else if (v === 'admin')        { if (state.user?.isAdmin) { loadAdminData().then(() => { app.innerHTML = viewAdmin(); }); } else navigate('dashboard'); }
   else navigate('dashboard');
 }
 
@@ -4300,114 +4328,162 @@ function removeTutor2(petId) {
 
 // ---- VISTA ADMINISTRADOR ----
 function viewAdmin() {
-  const users   = getUsers();
-  const invites = getInvites();
-  const resets  = getResets();
-  const allPets = state.pets || [];
-  const allExps = state.expenses || [];
-  const totalRevenue = 0; // SaaS revenue: pendiente de integración de pagos
-  const today = new Date().toISOString().slice(0,10);
-  const thisMonth = today.slice(0,7);
-  const expsMonth = allExps.filter(e => e.date?.startsWith(thisMonth));
-  const totalMonth = expsMonth.reduce((s,e) => s + (parseFloat(e.amount)||0), 0);
+  if (!state.user?.isAdmin) { navigate('dashboard'); return ''; }
+  const ad = state.adminData || { profiles: [], pets: [] };
+  const profiles = ad.profiles;
+  const allPets  = ad.pets;
 
-  const registeredUsers = [
-    { name: 'Felipe Molina', email: 'demo@mypets.cl', createdAt: '2023-01-01', plan: 'Pro', pets: allPets.length },
-    ...users.map(u => ({ ...u, plan: 'Free', pets: 0 })),
+  const planColors = {
+    free:   'bg-gray-100 text-gray-600',
+    basic:  'bg-blue-100 text-blue-700',
+    pro:    'bg-brand-100 text-brand-700',
+    clinic: 'bg-amber-100 text-amber-700',
+  };
+  const planLabel = { free:'Free', basic:'Basic', pro:'Pro', clinic:'Clínica' };
+
+  const totalUsers  = profiles.length;
+  const totalPets   = allPets.length;
+  const proUsers    = profiles.filter(p => p.plan === 'pro').length;
+  const basicUsers  = profiles.filter(p => p.plan === 'basic').length;
+  const clinicUsers = profiles.filter(p => p.plan === 'clinic').length;
+  const paidUsers   = proUsers + basicUsers + clinicUsers;
+
+  const speciesDist = allPets.reduce((acc, p) => { acc[p.species] = (acc[p.species]||0)+1; return acc; }, {});
+
+  const week = Array.from({length:7}, (_,i) => {
+    const d = new Date(); d.setDate(d.getDate()-6+i);
+    return d.toISOString().slice(0,10);
+  });
+  const signupsByDay = week.map(d => profiles.filter(p => p.created_at?.startsWith(d)).length);
+
+  const tab = state.adminTab || 'dashboard';
+  const tabs = [
+    { id:'dashboard', label:'📊 Dashboard' },
+    { id:'usuarios',  label:'👥 Usuarios' },
+    { id:'planes',    label:'💳 Planes' },
   ];
 
-  return appShell(`
-    <div class="max-w-5xl mx-auto">
-      ${pageHeader('Panel Administrador ⚙️', 'Gestión de la plataforma MyPets SaaS')}
-
-      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8 stagger">
-        ${statCard('👥','Usuarios registrados', registeredUsers.length, 'brand')}
-        ${statCard('🐾','Mascotas en plataforma', allPets.length, 'teal')}
-        ${statCard('📧','Invitaciones enviadas', invites.length, 'amber')}
-        ${statCard('💰','Gasto registrado este mes', fmtCLP(totalMonth), 'red')}
+  const tabContent = () => {
+    if (tab === 'dashboard') return `
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        ${statCard('👥', 'Usuarios', totalUsers, 'brand')}
+        ${statCard('🐾', 'Mascotas', totalPets, 'teal')}
+        ${statCard('💳', 'Usuarios pagos', paidUsers, 'amber')}
+        ${statCard('🆓', 'Plan Free', totalUsers - paidUsers, 'red')}
       </div>
-
       <div class="grid md:grid-cols-2 gap-6 mb-6">
         <div class="bg-white rounded-2xl shadow-sm p-5">
-          <h3 class="font-semibold text-gray-800 mb-4">📊 Distribución de mascotas</h3>
-          <div class="space-y-2">
-            ${Object.entries(allPets.reduce((acc, p) => { acc[p.species]=(acc[p.species]||0)+1; return acc; }, {})).map(([sp,n]) => `
-              <div class="flex items-center gap-3">
-                <span class="text-lg w-7">${speciesEmoji(sp)}</span>
-                <div class="flex-1 bg-gray-100 rounded-full h-2"><div class="h-2 rounded-full bg-brand-500" style="width:${Math.round(n/allPets.length*100)}%"></div></div>
-                <span class="text-sm text-gray-600 w-24 text-right">${sp} (${n})</span>
-              </div>`).join('') || '<p class="text-sm text-gray-400">Sin datos</p>'}
+          <h3 class="font-semibold text-gray-800 mb-4">💳 Distribución de planes</h3>
+          <div class="space-y-3">
+            ${[['free','Free',totalUsers-paidUsers,'bg-gray-400'],['basic','Basic',basicUsers,'bg-blue-500'],['pro','Pro',proUsers,'bg-brand-500'],['clinic','Clínica',clinicUsers,'bg-amber-500']].map(([_,label,n,color]) => {
+              const pct = totalUsers > 0 ? Math.round(n/totalUsers*100) : 0;
+              return '<div><div class="flex justify-between text-sm mb-1"><span class="font-medium text-gray-700">'+label+'</span><span class="text-gray-500">'+n+' usuarios ('+pct+'%)</span></div><div class="bg-gray-100 rounded-full h-2"><div class="h-2 rounded-full '+color+'" style="width:'+pct+'%"></div></div></div>';
+            }).join('')}
           </div>
         </div>
-
         <div class="bg-white rounded-2xl shadow-sm p-5">
-          <h3 class="font-semibold text-gray-800 mb-4">🔗 Últimas invitaciones</h3>
-          ${invites.length === 0
-            ? `<p class="text-sm text-gray-400 text-center py-4">Sin invitaciones enviadas</p>`
-            : `<div class="space-y-2">
-                 ${[...invites].reverse().slice(0,5).map(inv => `
-                   <div class="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
-                     <div>
-                       <div class="font-medium text-gray-800">${inv.invitedEmail}</div>
-                       <div class="text-xs text-gray-400">Para: ${inv.petName} · ${inv.role}</div>
-                     </div>
-                     <span class="badge ${inv.used ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}">${inv.used ? 'Aceptada' : 'Pendiente'}</span>
-                   </div>`).join('')}
-               </div>`}
+          <h3 class="font-semibold text-gray-800 mb-4">🐾 Mascotas por especie</h3>
+          <div class="space-y-2">
+            ${Object.entries(speciesDist).length === 0
+              ? '<p class="text-sm text-gray-400 text-center py-6">Sin mascotas registradas</p>'
+              : Object.entries(speciesDist).sort((a,b)=>b[1]-a[1]).map(([sp,n]) => {
+                  const pct = Math.round(n/totalPets*100);
+                  return '<div class="flex items-center gap-3"><span class="text-xl w-8">'+speciesEmoji(sp)+'</span><div class="flex-1 bg-gray-100 rounded-full h-2"><div class="h-2 rounded-full bg-teal-500" style="width:'+pct+'%"></div></div><span class="text-sm text-gray-500 w-28 text-right">'+sp+' · '+n+'</span></div>';
+                }).join('')}
+          </div>
         </div>
       </div>
+      <div class="bg-white rounded-2xl shadow-sm p-5">
+        <h3 class="font-semibold text-gray-800 mb-4">📈 Registros últimos 7 días</h3>
+        <div class="flex items-end gap-2 h-24">
+          ${signupsByDay.map((n, i) => {
+            const max = Math.max(...signupsByDay, 1);
+            const h   = Math.round((n/max)*100);
+            const day = week[i].slice(5).replace('-','/');
+            return '<div class="flex-1 flex flex-col items-center gap-1"><span class="text-xs font-semibold text-brand-600">'+(n>0?n:'')+'</span><div class="w-full rounded-t-md bg-brand-500 transition-all" style="height:'+h+'%;min-height:'+(n>0?8:2)+'px"></div><span class="text-[10px] text-gray-400">'+day+'</span></div>';
+          }).join('')}
+        </div>
+      </div>`;
 
-      <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
-        <div class="flex items-center justify-between mb-4">
-          <h3 class="font-semibold text-gray-800">👥 Usuarios de la plataforma</h3>
-          <span class="text-xs text-gray-400">${registeredUsers.length} total</span>
+    if (tab === 'usuarios') return `
+      <div class="bg-white rounded-2xl shadow-sm overflow-hidden">
+        <div class="flex items-center justify-between p-5 border-b border-gray-100">
+          <h3 class="font-semibold text-gray-800">Todos los usuarios <span class="text-xs text-gray-400 font-normal ml-2">${totalUsers} total</span></h3>
         </div>
         <div class="overflow-x-auto">
           <table class="w-full text-sm">
             <thead>
-              <tr class="text-left text-xs text-gray-400 border-b border-gray-100">
-                <th class="pb-2 font-medium">Usuario</th>
-                <th class="pb-2 font-medium">Email</th>
-                <th class="pb-2 font-medium">Plan</th>
-                <th class="pb-2 font-medium">Mascotas</th>
-                <th class="pb-2 font-medium">Registro</th>
+              <tr class="text-left text-xs text-gray-400 bg-gray-50">
+                <th class="px-5 py-3 font-medium">Usuario</th>
+                <th class="px-4 py-3 font-medium hidden md:table-cell">Email</th>
+                <th class="px-4 py-3 font-medium">Plan</th>
+                <th class="px-4 py-3 font-medium hidden md:table-cell">Mascotas</th>
+                <th class="px-4 py-3 font-medium hidden md:table-cell">Registro</th>
+                <th class="px-4 py-3 font-medium">Acción</th>
               </tr>
             </thead>
             <tbody class="divide-y divide-gray-50">
-              ${registeredUsers.map(u => `
-                <tr class="hover:bg-gray-50">
-                  <td class="py-2.5 font-medium text-gray-900">${u.name}</td>
-                  <td class="py-2.5 text-gray-500">${u.email}</td>
-                  <td class="py-2.5"><span class="badge ${u.plan==='Pro'?'bg-brand-100 text-brand-700':'bg-gray-100 text-gray-500'}">${u.plan}</span></td>
-                  <td class="py-2.5 text-gray-500">${u.pets}</td>
-                  <td class="py-2.5 text-gray-400">${u.createdAt ? formatDate(u.createdAt.slice(0,10)) : '—'}</td>
-                </tr>`).join('')}
+              ${profiles.length === 0
+                ? '<tr><td colspan="6" class="text-center py-10 text-gray-400">Sin usuarios</td></tr>'
+                : profiles.map(u => {
+                    const petCount = allPets.filter(p => p.owner_id === u.id).length;
+                    const plan = u.plan || 'free';
+                    const pColor = planColors[plan] || planColors.free;
+                    const pLbl   = planLabel[plan] || plan;
+                    return '<tr class="hover:bg-gray-50 transition-colors"><td class="px-5 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center text-white text-xs font-bold flex-shrink-0">'+((u.name||'?')[0].toUpperCase())+'</div><div><div class="font-medium text-gray-900">'+(u.name||'—')+'</div>'+(u.is_admin?'<span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">ADMIN</span>':'')+'</div></div></td><td class="px-4 py-3 text-gray-500 hidden md:table-cell">'+(u.email||'—')+'</td><td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold '+pColor+'">'+pLbl+'</span></td><td class="px-4 py-3 text-gray-500 hidden md:table-cell">'+petCount+'</td><td class="px-4 py-3 text-gray-400 hidden md:table-cell">'+(u.created_at?formatDate(u.created_at.slice(0,10)):'—')+'</td><td class="px-4 py-3"><button onclick="openChangePlanModal(\''+u.id+'\',\''+((u.name||'').replace(/'/g,"\\'"))+'\',\''+plan+'\')" class="text-xs px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 font-medium transition-colors">Cambiar plan</button></td></tr>';
+                  }).join('')}
             </tbody>
           </table>
         </div>
-      </div>
+      </div>`;
 
-      <div class="bg-white rounded-2xl shadow-sm p-5">
-        <h3 class="font-semibold text-gray-800 mb-4">🔑 Solicitudes de recuperación de contraseña</h3>
-        ${resets.length === 0
-          ? `<p class="text-sm text-gray-400 text-center py-4">Sin solicitudes</p>`
-          : `<div class="space-y-2">
-               ${[...resets].reverse().slice(0,10).map(r => `
-                 <div class="flex items-center justify-between text-sm py-1.5 border-b border-gray-100 last:border-0">
-                   <div>
-                     <div class="font-medium text-gray-800">${r.email}</div>
-                     <div class="text-xs text-gray-400">${new Date(r.createdAt).toLocaleString('es-CL')}</div>
-                   </div>
-                   <span class="badge ${r.used ? 'bg-green-100 text-green-700' : Date.now()-r.createdAt > 3600000 ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-700'}">
-                     ${r.used ? 'Usado' : Date.now()-r.createdAt > 3600000 ? 'Expirado' : 'Activo'}
-                   </span>
-                 </div>`).join('')}
-             </div>`}
+    if (tab === 'planes') return `
+      <div class="grid md:grid-cols-2 lg:grid-cols-4 gap-4">
+        ${[
+          { id:'free',   name:'Free',    price:'$0',         features:['1 mascota','Historial básico','Vacunas y medicamentos','Sin soporte'] },
+          { id:'basic',  name:'Basic',   price:'$4.990/mes', features:['3 mascotas','Todo Free','Agenda y finanzas','Soporte por email'] },
+          { id:'pro',    name:'Pro',     price:'$9.990/mes', features:['Mascotas ilimitadas','Todo Basic','Seguimiento avanzado','IA veterinaria','Soporte prioritario'] },
+          { id:'clinic', name:'Clínica', price:'$29.990/mes',features:['Multi-usuario','Gestión clínica','Panel de análisis','API acceso','Soporte dedicado'] },
+        ].map(p => {
+          const cnt = profiles.filter(u=>(u.plan||'free')===p.id).length;
+          return '<div class="bg-white rounded-2xl shadow-sm p-5 border-2 '+(p.id==='pro'?'border-brand-400':'border-transparent')+'"><div class="mb-3">'+(p.id==='pro'?'<span class="text-[10px] bg-brand-500 text-white px-2 py-0.5 rounded-full font-bold uppercase tracking-wide">Popular</span>':'')+'<h3 class="font-bold text-gray-900 text-lg mt-1">'+p.name+'</h3><p class="text-2xl font-black text-gray-900 mt-1">'+p.price+'</p></div><ul class="space-y-1.5 mb-4">'+p.features.map(f=>'<li class="flex items-start gap-2 text-sm text-gray-600"><span class="text-green-500 mt-0.5">✓</span>'+f+'</li>').join('')+'</ul><div class="pt-3 border-t border-gray-100 text-xs text-gray-400">'+cnt+' usuario'+(cnt!==1?'s':'')+' activo'+(cnt!==1?'s':'')+'</div></div>';
+        }).join('')}
+      </div>`;
+    return '';
+  };
+
+  return appShell(`
+    <div class="max-w-5xl mx-auto">
+      ${pageHeader('Panel Administrador ⚙️', 'Command Center · MyPets SaaS')}
+      <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+        ${tabs.map(t => '<button onclick="state.adminTab=\''+t.id+'\';render()" class="px-4 py-2 rounded-lg text-sm font-medium transition-all '+(tab===t.id?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700')+'">'+t.label+'</button>').join('')}
       </div>
+      ${tabContent()}
     </div>
   `);
 }
 
+async function openChangePlanModal(userId, userName, currentPlan) {
+  const plans = [
+    { id:'free',   label:'Free',    desc:'Gratis' },
+    { id:'basic',  label:'Basic',   desc:'$4.990/mes' },
+    { id:'pro',    label:'Pro',     desc:'$9.990/mes' },
+    { id:'clinic', label:'Clínica', desc:'$29.990/mes' },
+  ];
+  openModal('<div class="modal-box p-5"><h3 class="text-lg font-bold text-gray-900 mb-1">Cambiar plan</h3><p class="text-sm text-gray-500 mb-4">Usuario: <strong>'+userName+'</strong></p><div class="space-y-2 mb-5">'+plans.map(p=>'<label class="flex items-center gap-3 p-3 rounded-xl border-2 cursor-pointer transition-all '+(p.id===currentPlan?'border-brand-400 bg-brand-50':'border-gray-100 hover:border-gray-200')+'"><input type="radio" name="new-plan" value="'+p.id+'" '+(p.id===currentPlan?'checked':'')+' class="accent-brand-600"><div class="flex-1"><div class="font-semibold text-sm text-gray-900">'+p.label+'</div><div class="text-xs text-gray-400">'+p.desc+'</div></div></label>').join('')+'</div><div class="flex gap-3"><button onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button><button onclick="applyPlanChange(\''+userId+'\')" class="btn-primary flex-1">Guardar</button></div></div>');
+}
+
+async function applyPlanChange(userId) {
+  const plan = document.querySelector('input[name="new-plan"]:checked')?.value;
+  if (!plan) return;
+  const { error } = await sb.from('profiles').update({ plan }).eq('id', userId);
+  if (error) { showToast('Error al cambiar plan', 'error'); return; }
+  const profile = (state.adminData?.profiles||[]).find(p=>p.id===userId);
+  if (profile) profile.plan = plan;
+  closeModal();
+  showToast('Plan actualizado ✅', 'success');
+  render();
+}
 // ---- INIT ----
 async function initApp() {
   initEmailJS();
