@@ -4483,6 +4483,23 @@ async function initApp() {
   injectStyles();
   loadState();
 
+  // Detect password recovery link FIRST (hash contains type=recovery)
+  const hash = location.hash;
+  const isRecovery = hash.includes('type=recovery');
+  if (isRecovery) {
+    // Let Supabase exchange the token silently, then show reset form
+    await sb.auth.getSession(); // exchanges the token from hash
+    state.currentView = 'resetPassword';
+    state.isLoggedIn = false;
+    history.replaceState(null, '', location.pathname);
+    render();
+    // Register listener for sign-out after reset
+    sb.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_OUT') { state.isLoggedIn = false; state.user = null; navigate('login'); }
+    });
+    return; // skip normal init
+  }
+
   // Check for existing Supabase session
   const { data: { session } } = await sb.auth.getSession();
   if (session && !state.isLoggedIn) {
@@ -4498,7 +4515,6 @@ async function initApp() {
   // Listen for auth changes
   sb.auth.onAuthStateChange((event, session) => {
     if (event === 'PASSWORD_RECOVERY') {
-      // User clicked the reset link — show the reset form
       state.currentView = 'resetPassword';
       state.isLoggedIn = false;
       history.replaceState(null, '', location.pathname);
