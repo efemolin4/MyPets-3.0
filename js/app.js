@@ -591,23 +591,16 @@ function viewResetPassword() {
   </div>`;
 }
 
-function handleResetPassword() {
+async function handleResetPassword() {
   const pass  = document.getElementById('rp-pass')?.value;
   const pass2 = document.getElementById('rp-pass2')?.value;
   if (!pass || pass.length < 6) { showToast('Mínimo 6 caracteres', 'error'); return; }
   if (pass !== pass2) { showToast('Las contraseñas no coinciden', 'error'); return; }
-  const token = state.resetToken;
-  if (!token) { showToast('Token inválido', 'error'); navigate('login'); return; }
-  const resets = getResets();
-  const reset = resets.find(r => r.token === token && !r.used);
-  if (!reset || Date.now() - reset.createdAt > 3600000) {
-    showToast('El enlace expiró. Solicita uno nuevo.', 'error'); navigate('forgot'); return;
-  }
-  const users = getUsers();
-  const user = users.find(u => u.email === reset.email);
-  if (user) { user.password = btoa(pass); saveUsers(users); }
-  reset.used = true; saveResets(resets);
-  state.resetToken = null;
+  showToast('Actualizando contraseña...', '');
+  const { error } = await sb.auth.updateUser({ password: pass });
+  if (error) { showToast('Error: ' + error.message, 'error'); return; }
+  await sb.auth.signOut();
+  state.isLoggedIn = false; state.user = null;
   showToast('✅ Contraseña actualizada. Inicia sesión.', 'success');
   navigate('login');
 }
@@ -4502,8 +4495,16 @@ async function initApp() {
     await loadDataFromSupabase();
   }
 
-  // Listen for auth changes (token refresh, sign out from another tab)
+  // Listen for auth changes
   sb.auth.onAuthStateChange((event, session) => {
+    if (event === 'PASSWORD_RECOVERY') {
+      // User clicked the reset link — show the reset form
+      state.currentView = 'resetPassword';
+      state.isLoggedIn = false;
+      history.replaceState(null, '', location.pathname);
+      render();
+      return;
+    }
     if (event === 'SIGNED_OUT') {
       state.isLoggedIn = false;
       state.user = null;
