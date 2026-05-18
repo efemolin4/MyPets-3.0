@@ -153,6 +153,14 @@ function saveState() {
 async function loadDataFromSupabase() {
   if (!state.user?.id) return;
   try {
+    // Fetch profile first (is_admin, plan) — always, regardless of pets
+    const { data: profile } = await sb.from('profiles').select('is_admin, plan').eq('id', state.user.id).single();
+    if (profile) {
+      state.user.isAdmin = profile.is_admin || false;
+      state.user.plan = profile.plan || 'free';
+      saveState();
+    }
+
     const { data: accessRows } = await sb.from('pet_access')
       .select('pet_id, role, pets(*)')
       .eq('user_id', state.user.id);
@@ -238,14 +246,6 @@ async function loadDataFromSupabase() {
       id: b.id, petId: b.pet_id, name: b.name, category: b.category,
       quantity: b.quantity, unit: b.unit, expiryDate: b.expiry_date,
       notes: b.notes, status: b.status }));
-
-    // Fetch user profile (for is_admin flag)
-    const { data: profile } = await sb.from('profiles').select('is_admin, plan').eq('id', state.user.id).single();
-    if (profile) {
-      state.user.isAdmin = profile.is_admin || false;
-      state.user.plan = profile.plan || 'free';
-      saveState();
-    }
 
   } catch(err) {
     console.error('Error loading from Supabase:', err);
