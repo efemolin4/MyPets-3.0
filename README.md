@@ -9,64 +9,66 @@ Aplicación web progresiva (PWA) de página única para tutores de mascotas. Per
 ## Características principales
 
 ### 🐾 Gestión de mascotas
-- Registro de múltiples mascotas con ficha completa: nombre, especie, raza, fecha de nacimiento, sexo, color, estado reproductivo y número de microchip
+- Registro de múltiples mascotas con ficha completa: nombre, especie, raza, fecha de nacimiento, sexo, color, estado reproductivo y microchip
 - Catálogo de razas por especie (perro, gato, ave, conejo, pez, hámster, reptil)
-- Avatar con foto o emoji personalizado
+- Avatar con emoji personalizado
 - Datos del veterinario de cabecera (nombre, clínica, teléfono, email)
-- Seguimiento de peso con historial de registros
 - Edad calculada automáticamente
 
 ### 💉 Vacunas
-- Registro de vacunas con catálogo específico por especie (ej. DHPP, antirrábica, triple felina)
+- Catálogo específico por especie (DHPP, antirrábica, triple felina, etc.)
 - Periodicidades configurables: mensual, bimestral, trimestral, semestral, anual, cada 2 o 3 años
 - Cálculo automático de fecha de próxima dosis
 - Alertas cuando una vacuna está vencida o próxima a vencer
-- Edición y eliminación de registros
 
 ### 🪱 Desparasitaciones
 - Registro de tratamientos antiparasitarios con producto, dosis y fecha
 - Mismo sistema de periodicidades y alertas que las vacunas
 
 ### 💊 Medicamentos y tratamientos
-- Registro completo: medicamento, dosis, unidad (mg, ml, comprimidos, gotas), frecuencia
-- Frecuencia configurable en horas o días (ej. cada 8 horas)
+- Registro completo: medicamento, dosis, unidad, frecuencia en horas o días
 - Cálculo automático de horarios de dosificación del día
-- Fecha de inicio, hora de inicio y duración del tratamiento en días
+- Fecha de inicio, hora de inicio y duración del tratamiento
 - Control de stock (cantidad, unidad, fecha de caducidad)
-- Recordatorio por dosis: horario exacto, 15, 30 o 60 minutos antes
 - Tratamientos activos vs. finalizados
 
 ### 📋 Historial clínico
 - Registro de consultas, cirugías, análisis, emergencias y observaciones
-- Cada entrada incluye: título, tipo, fecha, médico, clínica, costo y notas
-- Posibilidad de adjuntar documentos (descripción de archivos)
 - Vista cronológica del historial completo
 
 ### 📅 Agenda
 - Calendario mensual con vista de eventos por día
-- Tipos de eventos: veterinario, vacuna, medicamento, desparasitación, baño, peluquería, y otros
+- Tipos: veterinario, vacuna, medicamento, desparasitación, baño, peluquería y otros
 - Indicadores visuales en días con eventos
-- Creación rápida de eventos desde cualquier día del calendario
-- Vista responsive: texto completo en desktop, puntos indicadores en mobile
 
 ### 💰 Finanzas
-- Registro de gastos por categoría: veterinario, medicamentos, alimento, accesorios, peluquería, seguro, vacunas y otros
-- Filtros por mascota y por período (mensual, trimestral, semestral, anual)
-- Gráfico de distribución de gastos por categoría (Chart.js)
-- Resumen de gasto total, promedio mensual y mes con mayor gasto
-- Exportación de datos a CSV
+- Registro de gastos por categoría con filtros por mascota y período
+- Gráfico de distribución de gastos (Chart.js)
+- Exportación a CSV
+- Predicción de gasto mensual
 
 ### 🧴 Botiquín
 - Inventario de medicamentos e insumos del hogar
 - Estado de stock: disponible, por agotarse o agotado
-- Filtros por mascota y por estado
-- Alertas de caducidad próxima o vencida
+- Alertas de caducidad
+
+### 📊 Seguimiento y nutrición
+- Historial de peso con gráfico de evolución
+- Registro de estado de ánimo y energía
+- Log de síntomas con severidad
+- Registro de comidas y actividad física
 
 ### 🏠 Dashboard
-- Vista general con estadísticas: total de mascotas, alertas activas, eventos próximos y medicamentos del día
-- Acceso rápido a mascotas recientes
-- Panel de alertas de salud (vacunas vencidas, tratamientos activos)
-- Próximos 3 eventos del calendario
+- Estadísticas: total de mascotas, alertas activas, eventos próximos y medicamentos del día
+- Streaks de bienestar
+- Recomendaciones inteligentes
+- Cumpleaños próximos
+
+### ⚙️ Panel de Administrador (SaaS)
+- Acceso exclusivo para usuarios con `is_admin = true`
+- **Dashboard:** métricas de usuarios, mascotas, distribución de planes, gráfico de registros 7 días
+- **Usuarios:** tabla completa con plan, mascotas y fecha de registro
+- **Planes:** gestión de planes Free / Basic / Pro / Clínica con cambio de plan por usuario
 
 ---
 
@@ -77,11 +79,37 @@ Aplicación web progresiva (PWA) de página única para tutores de mascotas. Per
 | Frontend | HTML5 + JavaScript vanilla (SPA) |
 | Estilos | Tailwind CSS v3 (CDN) + CSS custom |
 | Gráficos | Chart.js 4.4 |
-| Email | EmailJS (notificaciones opcionales) |
-| Persistencia | localStorage (`mypets_v3`) |
+| Auth | Supabase Auth (email + password, recuperación) |
+| Base de datos | Supabase (PostgreSQL + RLS) |
+| Email | EmailJS (opcional) |
 | Deploy | Vercel |
 
-**Sin dependencias de backend.** Todo el estado se persiste en `localStorage` del navegador. No requiere servidor, base de datos ni build step.
+**Sin backend propio.** Auth y datos gestionados 100% por Supabase con Row Level Security.
+
+---
+
+## Arquitectura de base de datos (Supabase)
+
+| Tabla | Descripción |
+|---|---|
+| `profiles` | Perfiles de usuario (nombre, plan, is_admin) |
+| `pets` | Mascotas (owner_id, especie, raza, microchip, vet) |
+| `pet_access` | Control de acceso por mascota (owner / editor) |
+| `vaccines` | Vacunas por mascota |
+| `dewormings` | Desparasitaciones por mascota |
+| `medications` | Medicamentos y tratamientos |
+| `clinical_history` | Historial clínico |
+| `events` | Eventos de la agenda |
+| `expenses` | Gastos y finanzas |
+| `botiquin` | Inventario del botiquín |
+| `weight_history` | Historial de peso |
+| `mood_log` | Registro de estado de ánimo |
+| `symptoms_log` | Log de síntomas |
+| `meals` | Registro de comidas |
+| `activities` | Actividad física |
+| `dose_log` | Log de dosis administradas |
+
+Todas las tablas tienen **Row Level Security (RLS)** activo — cada usuario solo ve sus propios datos.
 
 ---
 
@@ -89,71 +117,75 @@ Aplicación web progresiva (PWA) de página única para tutores de mascotas. Per
 
 ```
 MyPets-3.0/
-├── index.html        # Punto de entrada
+├── index.html        # Punto de entrada + CDN scripts
 ├── css/
 │   └── style.css     # Estilos personalizados y animaciones
 └── js/
-    └── app.js        # Aplicación completa (~3.400 líneas)
+    └── app.js        # Aplicación completa (~4500 líneas)
 ```
 
 ---
 
-## Módulos del código (`app.js`)
+## Módulos principales (`app.js`)
 
 | Función | Descripción |
 |---|---|
-| `viewDashboard()` | Pantalla de inicio con resumen |
+| `initApp()` | Inicialización, sesión Supabase, detección recovery |
+| `loadDataFromSupabase()` | Carga paralela de todos los datos del usuario |
+| `loadAdminData()` | Carga datos de todos los usuarios (solo admin) |
+| `viewDashboard()` | Pantalla de inicio con resumen y streaks |
 | `viewPets()` | Listado de mascotas |
-| `viewAddPet()` | Stepper de registro (3 pasos) |
+| `viewAddPet()` | Stepper de registro (4 pasos) |
 | `viewPetProfile()` | Perfil completo con pestañas |
 | `viewCalendar()` | Agenda mensual |
 | `viewFinance()` | Módulo de gastos y gráficos |
 | `viewBotiquin()` | Inventario del botiquín |
-| `viewAdmin()` | Panel de administración |
-| `openVaccineModal()` | Modal de vacunas |
-| `openDewormModal()` | Modal de desparasitaciones |
-| `openMedModal()` | Modal de medicamentos |
-| `openHistoryModal()` | Modal de historial clínico |
-| `openEventModal()` | Modal de agenda |
-| `openExpenseModal()` | Modal de gastos |
-| `injectStyles()` | Inyección dinámica de CSS |
+| `viewAdmin()` | Panel de administrador SaaS |
+| `savePet()` | Crear mascota en Supabase |
+| `saveVaccine()` | Guardar vacuna en Supabase |
+| `saveMedication()` | Guardar medicamento en Supabase |
+| `saveEvent()` | Guardar evento en Supabase |
+| `saveExpense()` | Guardar gasto en Supabase |
+| `applyPlanChange()` | Cambiar plan de usuario (admin) |
 
 ---
 
-## Autenticación
-
-Sistema de usuarios completo en localStorage:
+## Autenticación (Supabase Auth)
 
 - **Registro** con nombre, email y contraseña
-- **Login** con persistencia de sesión
-- **Recuperación de contraseña** por email (simulada o vía EmailJS)
-- **Modo demo** con datos precargados para explorar la app sin registro
-- **Sistema de invitaciones** entre usuarios
+- **Login** con persistencia de sesión (JWT)
+- **Recuperación de contraseña** por email con link seguro
+- **Modo demo** con datos precargados (`demo@mypets.cl`)
+- Sesión persistente entre recargas con `getSession()`
 
 ---
 
-## Diseño y UX
+## Planes SaaS
 
-- **Responsive completo:** sidebar en desktop, bottom navigation en mobile
-- **Modales tipo bottom-sheet** en mobile (se deslizan desde abajo)
-- **Animaciones suaves** con CSS keyframes (`fadeIn`, `slideUp`, `scaleIn`)
-- **Soporte safe-area** para iPhone con notch (iOS env variables)
-- **Tema de color:** violeta (`#7c3aed`) como color principal, teal como acento
-- **Fuente:** Inter (Google Fonts)
+| Plan | Precio | Límites |
+|---|---|---|
+| Free | $0 | 1 mascota, funciones básicas |
+| Basic | $4.990/mes | 3 mascotas, agenda y finanzas |
+| Pro | $9.990/mes | Mascotas ilimitadas, seguimiento avanzado, IA |
+| Clínica | $29.990/mes | Multi-usuario, gestión clínica, API |
 
 ---
 
-## Configuración de EmailJS (opcional)
-
-Para activar notificaciones por email, editar las constantes al inicio de `app.js`:
+## Configuración de Supabase
 
 ```javascript
-const EMAILJS_SERVICE_ID  = 'service_mypets';
-const EMAILJS_TEMPLATE_ID = 'template_mypets';
-const EMAILJS_PUBLIC_KEY  = 'TU_PUBLIC_KEY_AQUI';
+const SUPABASE_URL  = 'https://TU_PROYECTO.supabase.co';
+const SUPABASE_ANON_KEY = 'TU_ANON_KEY';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 ```
 
-Crear cuenta gratuita en [emailjs.com](https://emailjs.com) y reemplazar los valores.
+### Marcar usuario como administrador
+
+```sql
+UPDATE public.profiles
+SET is_admin = true
+WHERE id = (SELECT id FROM auth.users WHERE email = 'tu@email.com');
+```
 
 ---
 
@@ -163,7 +195,9 @@ El proyecto no requiere build. Se puede desplegar directamente en:
 
 - **Vercel:** conectar el repositorio y desplegar automáticamente
 - **GitHub Pages:** activar Pages desde la rama `main`
-- **Cualquier hosting estático:** subir los 3 archivos (`index.html`, `css/style.css`, `js/app.js`)
+- **Cualquier hosting estático:** subir los 3 archivos
+
+Requiere una cuenta gratuita en [supabase.com](https://supabase.com) para auth y base de datos.
 
 ---
 
