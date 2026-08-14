@@ -4017,8 +4017,8 @@ function loadDemoAndLogin() {
     expenses: buildExpenses([greta, luna, coco]),
   };
 
-  localStorage.setItem('mypets_v3', JSON.stringify(demoState));
-  loadState();
+  Object.assign(state, demoState);
+  saveState();
   showToast('✅ Datos de prueba cargados (3 años)', 'success');
   navigate('dashboard');
 }
