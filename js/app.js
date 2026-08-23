@@ -2,22 +2,6 @@
    MYPETS 3.0 — Aplicación Principal
    ============================================================ */
 
-// ---- EMAILJS CONFIG (reemplaza con tus claves en https://emailjs.com) ----
-const EMAILJS_SERVICE_ID  = 'service_mypets';
-const EMAILJS_TEMPLATE_ID = 'template_mypets';
-const EMAILJS_PUBLIC_KEY  = 'TU_PUBLIC_KEY_AQUI';
-let emailjsReady = false;
-function initEmailJS() {
-  try { emailjs.init({ publicKey: EMAILJS_PUBLIC_KEY }); emailjsReady = true; } catch(e) {}
-}
-function sendEmail(to, subject, body, extra = {}) {
-  if (!emailjsReady) {
-    console.log(`[Email simulado] Para: ${to}\nAsunto: ${subject}\n${body}`);
-    return Promise.resolve();
-  }
-  return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, { to_email: to, subject, message: body, ...extra });
-}
-
 // ---- SUPABASE CONFIG ----
 const SUPABASE_URL = 'https://dmpvqhdpldlvzwunscah.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtcHZxaGRwbGRsdnp3dW5zY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NjExNTQsImV4cCI6MjA5NDQzNzE1NH0.gUmmrm7hgzAHMKcIw1hBLDBEj7sr8lZf6g6zaIzgblI';
@@ -45,9 +29,10 @@ const VACCINES_BY_SPECIES = {
 
 // ---- PERIODICIDADES ----
 const PERIODICITY_OPTIONS = [
-  { label: 'Sin periodicidad',          months: 0,  days: 0    },
-  { label: '1 mes (30 días)',           months: 1,  days: 30   },
-  { label: 'Bimestral (60 días)',       months: 2,  days: 60   },
+  { label: 'Sin periodicidad',          months: 0,   days: 0    },
+  { label: '1 mes (30 días)',           months: 1,   days: 30   },
+  { label: '1 1/2 meses (45 días)',     months: 1.5, days: 45   },
+  { label: 'Bimestral (60 días)',       months: 2,   days: 60   },
   { label: 'Trimestral (90 días)',      months: 3,  days: 90   },
   { label: 'Semestral (180 días)',      months: 6,  days: 180  },
   { label: 'Anual (365 días)',          months: 12, days: 365  },
@@ -126,10 +111,10 @@ function loadState() {
       state.currentView = p.isLoggedIn ? 'dashboard' : 'login';
       state.currentTab = 'general'; state.addPetStep = 1; state.newPetData = {};
     }
-    // Handle URL hash tokens
+    // Handle URL hash/query tokens
     const hash = location.hash;
     const resetMatch = hash.match(/reset=([^&]+)/);
-    const inviteMatch = hash.match(/invite=([^&]+)/);
+    const inviteMatch = hash.match(/invite=([^&]+)/) || location.search.match(/invite=([^&]+)/);
     if (resetMatch) {
       state.resetToken = resetMatch[1];
       state.currentView = 'resetPassword';
@@ -149,6 +134,8 @@ function saveState() {
     }));
   } catch(e) {}
 }
+
+function isDemoUser() { return !state.user?.id; }
 
 async function loadDataFromSupabase() {
   if (!state.user?.id) return;
@@ -282,7 +269,10 @@ function formatDate(d) {
 function addMonths(dateStr, months) {
   if (!dateStr || !months) return '';
   const d = new Date(dateStr + 'T12:00:00');
-  d.setMonth(d.getMonth() + parseInt(months));
+  const whole = Math.trunc(months);
+  const frac = months - whole;
+  d.setMonth(d.getMonth() + whole);
+  if (frac) d.setDate(d.getDate() + Math.round(frac * 30));
   return d.toISOString().slice(0, 10);
 }
 
@@ -506,17 +496,10 @@ function viewLogin() {
           <div class="mt-4 text-center text-sm text-gray-500">
             ¿No tienes cuenta? <button onclick="navigate('register')" class="text-brand-600 font-semibold hover:underline">Regístrate gratis</button>
           </div>
-          <div class="mt-4 p-4 bg-gradient-to-br from-brand-50 to-teal-50 rounded-2xl border border-brand-100">
-            <div class="flex items-center gap-2 mb-2">
-              <span class="text-xs font-bold text-brand-700">🧪 Cuenta de prueba</span>
-            </div>
-            <div class="flex gap-4 text-xs text-gray-600 mb-3">
-              <div><span class="text-gray-400">Email: </span><strong class="select-all">demo@mypets.cl</strong></div>
-              <div><span class="text-gray-400">Clave: </span><strong class="select-all">demo123</strong></div>
-            </div>
+          <div class="mt-4">
             <button type="button" onclick="loadDemoAndLogin()"
               class="w-full py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-700 transition-colors">
-              ⚡ Entrar con datos de demo
+              🧪 Ingresar con datos de prueba
             </button>
           </div>
         </div>
@@ -2536,16 +2519,23 @@ async function saveVaccine(e, petId) {
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
   const date = g('v-date'), period = g('v-period');
-  const { data, error } = await sb.from('vaccines').insert({
-    pet_id: petId, name: g('v-name'), code: g('v-code'), date,
-    periodicity: period, next_date: period ? addMonths(date, parseInt(period)) : '',
-    alert_type: g('v-alert'), alert_days: g('v-alert-days'), cost: g('v-cost')
-  }).select().single();
-  if (error) { showToast('Error al guardar vacuna', 'error'); return; }
+  const nextDate = period ? addMonths(date, parseFloat(period)) : '';
+  const vaccine = { name: g('v-name'), code: g('v-code'), date, periodicity: period,
+    nextDate, alertType: g('v-alert'), alertDays: g('v-alert-days') || null, cost: g('v-cost') || null };
   pet.vaccines = pet.vaccines || [];
-  pet.vaccines.push({ id: data.id, name: data.name, code: data.code, date: data.date,
-    periodicity: data.periodicity, nextDate: data.next_date,
-    alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
+  if (isDemoUser()) {
+    pet.vaccines.push({ id: genId(), ...vaccine });
+  } else {
+    const { data, error } = await sb.from('vaccines').insert({
+      pet_id: petId, name: vaccine.name, code: vaccine.code, date,
+      periodicity: period, next_date: nextDate,
+      alert_type: vaccine.alertType, alert_days: vaccine.alertDays, cost: vaccine.cost
+    }).select().single();
+    if (error) { showToast('Error al guardar vacuna', 'error'); console.error(error); return; }
+    pet.vaccines.push({ id: data.id, name: data.name, code: data.code, date: data.date,
+      periodicity: data.periodicity, nextDate: data.next_date,
+      alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
+  }
   closeModal(); render();
   showToast('Vacuna guardada ✅', 'success');
 }
@@ -2561,17 +2551,28 @@ async function saveDeworming(e, petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const date = g('d-date'), period = g('d-period');
-  const { data, error } = await sb.from('dewormings').insert({
-    pet_id: petId, product: g('d-product'), dose: g('d-dose'), date,
-    periodicity: period, next_date: period ? addMonths(date, parseInt(period)) : '',
-    alert_type: g('d-alert'), alert_days: g('d-alert-days'), cost: g('d-cost')
-  }).select().single();
-  if (error) { showToast('Error al guardar desparasitación', 'error'); return; }
+  const date = g('d-date'), period = g('d-period'), format = g('d-format');
+  const nextDate = period ? addMonths(date, parseFloat(period)) : '';
+  const unitMap = { Comprimido:'Comprimido(s)', Pipeta:'ML', Collar:'Unidad(es)', Spray:'ML', Jarabe:'ML', Inyección:'ML' };
+  const deworming = { product: g('d-product'), type: g('d-type'), format, dose: g('d-dose'),
+    unit: unitMap[format] || '', date, periodicity: period,
+    nextDate, alertType: g('d-alert'), alertDays: g('d-alert-days') || null, cost: g('d-cost') || null };
   pet.deworming = pet.deworming || [];
-  pet.deworming.push({ id: data.id, product: data.product, dose: data.dose, date: data.date,
-    periodicity: data.periodicity, nextDate: data.next_date,
-    alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
+  if (isDemoUser()) {
+    pet.deworming.push({ id: genId(), ...deworming });
+  } else {
+    const { data, error } = await sb.from('dewormings').insert({
+      pet_id: petId, product: deworming.product, type: deworming.type, format: deworming.format,
+      dose: deworming.dose, unit: deworming.unit, date,
+      periodicity: period, next_date: nextDate,
+      alert_type: deworming.alertType, alert_days: deworming.alertDays, cost: deworming.cost
+    }).select().single();
+    if (error) { showToast('Error al guardar desparasitación', 'error'); console.error(error); return; }
+    pet.deworming.push({ id: data.id, product: data.product, type: data.type, format: data.format,
+      dose: data.dose, unit: data.unit, date: data.date,
+      periodicity: data.periodicity, nextDate: data.next_date,
+      alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
+  }
   closeModal(); render();
   showToast('Desparasitación guardada ✅', 'success');
 }
@@ -2869,7 +2870,7 @@ function updateNextDatePreview(prefix) {
   const preview = document.getElementById(`${prefix}-next-preview`);
   const nextLabel = document.getElementById(`${prefix}-next-date`);
   if (!dateEl || !periodEl || !preview || !nextLabel) return;
-  const months = parseInt(periodEl.value);
+  const months = parseFloat(periodEl.value);
   const date = dateEl.value;
   if (date && months > 0) {
     const next = addMonths(date, months);
@@ -4067,7 +4068,7 @@ function saveEditVaccine(e, petId, vaccineId) {
   const g = id => document.getElementById(id)?.value;
   const date = g('ev-date'), period = g('ev-period');
   v.name = g('ev-name'); v.code = g('ev-code'); v.date = date;
-  v.periodicity = period; v.nextDate = period ? addMonths(date, parseInt(period)) : '';
+  v.periodicity = period; v.nextDate = period ? addMonths(date, parseFloat(period)) : '';
   v.cost = g('ev-cost');
   saveState(); closeModal(); render();
   showToast('Vacuna actualizada ✓', 'success');
@@ -4288,7 +4289,7 @@ function openInviteTutor2Modal(petId) {
     </div>`);
 }
 
-function sendTutor2Invite(e, petId) {
+async function sendTutor2Invite(e, petId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
@@ -4299,12 +4300,19 @@ function sendTutor2Invite(e, petId) {
   const invites = getInvites();
   invites.push({ token, petId, petName: pet.name, inviterEmail: state.user?.email, invitedEmail: email, invitedName: name, role, createdAt: Date.now(), used: false });
   saveInvites(invites);
-  const link = `${location.origin}${location.pathname}#invite=${token}`;
-  const body = `Hola ${name},\n\n${state.user?.name} te ha invitado a ser tutor de ${pet.name} en MyPets 3.0.\n\nHaz clic en el siguiente enlace para crear tu cuenta:\n${link}\n\nMyPets 3.0`;
-  sendEmail(email, `Te han invitado a cuidar a ${pet.name} en MyPets`, body)
-    .then(() => showToast(`✅ Invitación enviada a ${email}`, 'success'))
-    .catch(() => { showToast(`✅ Invitación generada (ver consola)`, 'success'); });
+  const link = `${location.origin}${location.pathname}?invite=${token}`;
   console.log(`[MyPets] Invitation link for ${email}: ${link}`);
+  // Enviado vía Supabase Auth (magic link) en vez de un tercero: requiere SMTP
+  // configurado en el proyecto de Supabase (Auth → Emails → SMTP Settings).
+  const { error } = await sb.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: link,
+      data: { invited_name: name, pet_name: pet.name, inviter_name: state.user?.name || '', role },
+    },
+  });
+  if (error) { showToast('Error al enviar la invitación', 'error'); console.error(error); return; }
+  showToast(`✅ Invitación enviada a ${email}`, 'success');
   // Guardamos como tutor pendiente
   pet.tutor2 = { name, email, role, pending: true };
   saveState(); closeModal(); render();
@@ -4479,7 +4487,6 @@ async function applyPlanChange(userId) {
 }
 // ---- INIT ----
 async function initApp() {
-  initEmailJS();
   injectStyles();
   loadState();
 

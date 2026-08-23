@@ -81,7 +81,7 @@ Aplicación web progresiva (PWA) de página única para tutores de mascotas. Per
 | Gráficos | Chart.js 4.4 |
 | Auth | Supabase Auth (email + password, recuperación) |
 | Base de datos | Supabase (PostgreSQL + RLS) |
-| Email | EmailJS (opcional) |
+| Email | Supabase Auth (SMTP) |
 | Deploy | Vercel |
 
 **Sin backend propio.** Auth y datos gestionados 100% por Supabase con Row Level Security.
@@ -179,6 +179,23 @@ const SUPABASE_ANON_KEY = 'TU_ANON_KEY';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 ```
 
+### Envío de correos (recuperar contraseña / invitar tutor)
+
+La app usa **solo Supabase Auth** para enviar correos (recuperación de
+contraseña y la invitación al segundo tutor, vía magic link) — ya no
+depende de EmailJS ni de ningún otro tercero. Para que los correos
+realmente lleguen hay que configurar en el Dashboard de Supabase:
+
+1. **Authentication → Emails → SMTP Settings**: activa "Enable Custom
+   SMTP" y configura un proveedor real (Resend, SendGrid, Postmark,
+   tu propio Gmail/Workspace, etc.). El servicio de correo por
+   defecto de Supabase es solo para pruebas y está limitado a unos
+   pocos correos por hora — con eso jamás va a andar en producción.
+2. **Authentication → URL Configuration → Redirect URLs**: agrega la
+   URL donde vive la app (por ejemplo `https://tu-dominio.com/*`) para
+   que los links de "recuperar contraseña" e "invitar tutor" puedan
+   redirigir de vuelta.
+
 ### Marcar usuario como administrador
 
 ```sql
@@ -186,6 +203,35 @@ UPDATE public.profiles
 SET is_admin = true
 WHERE id = (SELECT id FROM auth.users WHERE email = 'tu@email.com');
 ```
+
+### Corregir columnas faltantes en `vaccines` y `dewormings`
+
+Las tablas `vaccines` y `dewormings` fueron creadas sin las columnas de
+periodicidad, alerta y costo que la app envía al guardar, por lo que
+crear una vacuna o desparasitación nueva fallaba con un error de
+Supabase (`Could not find the '...' column ... in the schema cache`).
+Ejecuta esto una sola vez en el SQL Editor de Supabase para agregarlas:
+
+```sql
+ALTER TABLE public.vaccines
+  ADD COLUMN IF NOT EXISTS code text,
+  ADD COLUMN IF NOT EXISTS periodicity numeric,
+  ADD COLUMN IF NOT EXISTS alert_type text,
+  ADD COLUMN IF NOT EXISTS alert_days integer,
+  ADD COLUMN IF NOT EXISTS cost numeric;
+
+ALTER TABLE public.dewormings
+  ADD COLUMN IF NOT EXISTS type text,
+  ADD COLUMN IF NOT EXISTS format text,
+  ADD COLUMN IF NOT EXISTS unit text,
+  ADD COLUMN IF NOT EXISTS periodicity numeric,
+  ADD COLUMN IF NOT EXISTS alert_type text,
+  ADD COLUMN IF NOT EXISTS alert_days integer,
+  ADD COLUMN IF NOT EXISTS cost numeric;
+```
+
+`periodicity` es `numeric` (no `integer`) para soportar la opción
+"1 1/2 meses" (valor `1.5`).
 
 ---
 
