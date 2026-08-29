@@ -7,14 +7,6 @@ const SUPABASE_URL = 'https://dmpvqhdpldlvzwunscah.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImRtcHZxaGRwbGRsdnp3dW5zY2FoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg4NjExNTQsImV4cCI6MjA5NDQzNzE1NH0.gUmmrm7hgzAHMKcIw1hBLDBEj7sr8lZf6g6zaIzgblI';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-// ---- HELPERS DE USUARIOS / INVITACIONES ----
-function getUsers()        { try { return JSON.parse(localStorage.getItem('mypets_users') || '[]'); } catch(e) { return []; } }
-function saveUsers(u)      { localStorage.setItem('mypets_users', JSON.stringify(u)); }
-function getInvites()      { try { return JSON.parse(localStorage.getItem('mypets_invites') || '[]'); } catch(e) { return []; } }
-function saveInvites(i)    { localStorage.setItem('mypets_invites', JSON.stringify(i)); }
-function getResets()       { try { return JSON.parse(localStorage.getItem('mypets_resets') || '[]'); } catch(e) { return []; } }
-function saveResets(r)     { localStorage.setItem('mypets_resets', JSON.stringify(r)); }
-
 // ---- VACUNAS POR ESPECIE ----
 const VACCINES_BY_SPECIES = {
   Perro:   ['Antirrábica','Polivalente DHPP (Distemper, Hepatitis, Parvovirus, Parainfluenza)','Parvovirus','Moquillo (Distemper)','Hepatitis Infecciosa Canina','Leptospirosis','Parainfluenza','Bordetella (Tos de las perreras)','Coronavirus Canino','Leishmaniasis'],
@@ -111,18 +103,13 @@ function loadState() {
       state.currentView = p.isLoggedIn ? 'dashboard' : 'login';
       state.currentTab = 'general'; state.addPetStep = 1; state.newPetData = {};
     }
-    // Handle URL hash/query tokens
-    const hash = location.hash;
-    const resetMatch = hash.match(/reset=([^&]+)/);
-    const inviteMatch = hash.match(/invite=([^&]+)/) || location.search.match(/invite=([^&]+)/);
-    if (resetMatch) {
-      state.resetToken = resetMatch[1];
-      state.currentView = 'resetPassword';
-      history.replaceState(null, '', location.pathname);
-    } else if (inviteMatch) {
+    // Un link de invitación de segundo tutor llega como ?invite=TOKEN — el login real
+    // ocurre vía magic link de Supabase, procesado por separado en initApp(). Solo
+    // guardamos el token acá; NO tocamos currentView (el usuario ya queda autenticado).
+    const inviteMatch = location.search.match(/invite=([^&]+)/);
+    if (inviteMatch) {
       state.inviteToken = inviteMatch[1];
-      state.currentView = 'register';
-      history.replaceState(null, '', location.pathname);
+      history.replaceState(null, '', location.pathname + location.hash);
     }
   } catch(e) {}
 }
@@ -156,26 +143,28 @@ async function loadDataFromSupabase() {
 
     const petIds = accessRows.map(r => r.pet_id);
 
-    const [vaccRes, dewRes, medRes, histRes, wRes, moodRes, symRes, mealRes, actRes, doseRes, evRes, expRes, botRes] = await Promise.all([
+    const [vaccRes, dewRes, medRes, histRes, wRes, moodRes, symRes, mealRes, actRes, doseRes, evRes, expRes, botRes, invRes] = await Promise.all([
       sb.from('vaccines').select('*').in('pet_id', petIds),
       sb.from('dewormings').select('*').in('pet_id', petIds),
       sb.from('medications').select('*').in('pet_id', petIds),
-      sb.from('clinical_history').select('*').in('pet_id', petIds),
+      sb.from('history_records').select('*').in('pet_id', petIds),
       sb.from('weight_history').select('*').in('pet_id', petIds),
-      sb.from('mood_log').select('*').in('pet_id', petIds),
-      sb.from('symptoms_log').select('*').in('pet_id', petIds),
+      sb.from('mood_logs').select('*').in('pet_id', petIds),
+      sb.from('symptoms_logs').select('*').in('pet_id', petIds),
       sb.from('meals').select('*').in('pet_id', petIds),
       sb.from('activities').select('*').in('pet_id', petIds),
-      sb.from('dose_log').select('*').in('pet_id', petIds),
+      sb.from('dose_logs').select('*').in('pet_id', petIds),
       sb.from('events').select('*').eq('user_id', state.user.id),
       sb.from('expenses').select('*').eq('user_id', state.user.id),
-      sb.from('botiquin').select('*').eq('user_id', state.user.id),
+      sb.from('botiquin_items').select('*').eq('user_id', state.user.id),
+      sb.from('invitations').select('*').in('pet_id', petIds).order('created_at', { ascending: false }),
     ]);
 
     const vacc = vaccRes.data || [], dew = dewRes.data || [], med = medRes.data || [];
     const hist = histRes.data || [], wh = wRes.data || [], mood = moodRes.data || [];
     const sym = symRes.data || [], meal = mealRes.data || [], act = actRes.data || [];
     const dose = doseRes.data || [];
+    const invites = invRes.data || [];
 
     state.pets = accessRows.map(row => {
       const pet = row.pets;
@@ -188,22 +177,33 @@ async function loadDataFromSupabase() {
         personalityTags: pet.personality_tags || [],
         avatar: pet.avatar_emoji || '',
         vet: { name: pet.vet_name||'', clinic: pet.vet_clinic||'', phone: pet.vet_phone||'', email: pet.vet_email||'' },
-        weightKg: '', weightGr: '', sizeRange: '', activityLevel: 2,
-        allergies: [], chronicConditions: [], tutor2: null,
+        weightKg: pet.weight_kg ?? '', weightGr: pet.weight_gr ?? '',
+        sizeRange: pet.size_range || '', activityLevel: pet.activity_level || 2,
+        allergies: pet.allergies || [], chronicConditions: pet.chronic_conditions || [],
+        tutor2: (() => {
+          const inv = invites.find(i => i.pet_id === pid);
+          return inv ? { name: inv.invited_name, email: inv.invited_email, role: inv.role, pending: !inv.used } : null;
+        })(),
         vaccines: vacc.filter(v => v.pet_id === pid).map(v => ({
           id: v.id, name: v.name, code: v.code, date: v.date, periodicity: v.periodicity,
           nextDate: v.next_date, alertType: v.alert_type, alertDays: v.alert_days, cost: v.cost })),
         deworming: dew.filter(d => d.pet_id === pid).map(d => ({
-          id: d.id, product: d.product, dose: d.dose, date: d.date, periodicity: d.periodicity,
+          id: d.id, product: d.product, type: d.type, format: d.format, dose: d.dose, unit: d.unit,
+          date: d.date, periodicity: d.periodicity,
           nextDate: d.next_date, alertType: d.alert_type, alertDays: d.alert_days, cost: d.cost })),
         medications: med.filter(m => m.pet_id === pid).map(m => ({
-          id: m.id, medication: m.medication, dose: m.dose, unit: m.unit,
-          frequency: m.frequency, freqUnit: m.freq_unit, startDate: m.start_date,
-          startTime: m.start_time, durationDays: m.duration_days, stockQty: m.stock_qty,
-          stockUnit: m.stock_unit, stockExpiry: m.stock_expiry, reminderMin: m.reminder_min, notes: m.notes })),
+          id: m.id, name: m.name, doseVal: m.dose_val, doseUnit: m.dose_unit,
+          dose: m.dose_val != null ? `${m.dose_val} ${m.dose_unit||''}`.trim() : '',
+          freqN: m.freq_n, freqUnit: m.freq_unit,
+          frequency: m.freq_n ? `Cada ${m.freq_n} ${m.freq_unit === 'horas' ? 'horas' : 'días'}` : '',
+          startDate: m.start_date, startTime: m.start_time,
+          treatmentDays: m.treatment_days, endDate: m.end_date, active: m.active,
+          reminder: m.reminder, stockTotal: m.stock_qty, stockUnit: m.stock_unit,
+          expiry: m.expiry_date, cost: m.cost })),
         clinicalHistory: hist.filter(h => h.pet_id === pid).map(h => ({
           id: h.id, title: h.title, type: h.type, date: h.date,
-          doctor: h.doctor, clinic: h.clinic, cost: h.cost, notes: h.notes })),
+          doctor: h.vet, clinic: h.clinic, cost: h.cost, notes: h.notes,
+          files: (h.files || []).map(f => { try { return JSON.parse(f); } catch(e) { return null; } }).filter(Boolean) })),
         weightHistory: wh.filter(w => w.pet_id === pid).map(w => ({
           id: w.id, date: w.date, kg: w.kg, gr: w.gr, notes: w.notes })),
         moodLog: mood.filter(m => m.pet_id === pid).map(m => ({
@@ -211,12 +211,12 @@ async function loadDataFromSupabase() {
         symptomsLog: sym.filter(s => s.pet_id === pid).map(s => ({
           id: s.id, date: s.date, symptoms: s.symptoms, severity: s.severity, notes: s.notes })),
         meals: meal.filter(m => m.pet_id === pid).map(m => ({
-          id: m.id, date: m.date, time: m.time, food: m.food,
-          portion: m.portion, portionUnit: m.portion_unit, notes: m.notes })),
+          id: m.id, date: m.date, time: m.time_of_day, food: m.type,
+          portion: m.amount, portionUnit: m.unit, notes: m.notes })),
         activities: act.filter(a => a.pet_id === pid).map(a => ({
-          id: a.id, date: a.date, type: a.type, duration: a.duration, notes: a.notes })),
+          id: a.id, date: a.date, type: a.type, duration: a.duration, distance: a.distance, notes: a.notes })),
         doseLog: dose.filter(d => d.pet_id === pid).map(d => ({
-          id: d.id, medicationId: d.medication_id, date: d.date, time: d.time, given: d.given })),
+          id: d.id, medicationId: d.med_id, date: d.date, given: d.confirmed })),
       };
     });
 
@@ -230,9 +230,9 @@ async function loadDataFromSupabase() {
 
     // store botiquin separately (not inside pet objects)
     state.botiquin = (botRes.data || []).map(b => ({
-      id: b.id, petId: b.pet_id, name: b.name, category: b.category,
+      id: b.id, petId: b.pet_id, name: b.name, category: b.type,
       quantity: b.quantity, unit: b.unit, expiryDate: b.expiry_date,
-      notes: b.notes, status: b.status }));
+      notes: b.notes }));
 
   } catch(err) {
     console.error('Error loading from Supabase:', err);
@@ -278,9 +278,12 @@ function addMonths(dateStr, months) {
 
 function getAge(dob) {
   if (!dob) return '';
-  const b = new Date(dob), n = new Date();
-  const y = n.getFullYear() - b.getFullYear(), m = n.getMonth() - b.getMonth();
-  if (y === 0) return `${Math.max(0,m)} mes${m !== 1 ? 'es' : ''}`;
+  const b = new Date(dob + 'T12:00:00'), n = new Date();
+  let y = n.getFullYear() - b.getFullYear();
+  let m = n.getMonth() - b.getMonth();
+  if (n.getDate() < b.getDate()) m--;
+  if (m < 0) { y--; m += 12; }
+  if (y <= 0) { const totalMonths = Math.max(0, y * 12 + m); return `${totalMonths} mes${totalMonths !== 1 ? 'es' : ''}`; }
   return `${y} año${y !== 1 ? 's' : ''}`;
 }
 
@@ -706,7 +709,7 @@ function viewDashboard() {
         let checkDate = new Date();
         for (let i = 0; i < 365; i++) {
           const dateStr = checkDate.toISOString().slice(0,10);
-          if (doseLog.some(dl => dl.date === dateStr && dl.confirmed)) {
+          if (doseLog.some(dl => dl.date === dateStr && dl.given)) {
             streak++;
             checkDate.setDate(checkDate.getDate()-1);
           } else {
@@ -1237,14 +1240,14 @@ function tabGeneral(pet) {
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-semibold text-gray-700">Segundo Tutor</h3>
           ${pet.tutor2?.name
-            ? `<button onclick="removeTutor2('${pet.id}')" class="text-xs text-red-500 hover:underline">Quitar tutor</button>`
+            ? `<button onclick="removeTutor2('${pet.id}')" class="text-xs text-red-500 hover:underline">${pet.tutor2.pending ? 'Cancelar invitación' : 'Quitar tutor'}</button>`
             : `<button onclick="openInviteTutor2Modal('${pet.id}')" class="btn-primary text-xs">+ Invitar</button>`}
         </div>
         ${pet.tutor2?.name
           ? `<div class="flex items-center gap-3">
                <div class="w-9 h-9 rounded-full bg-brand-100 flex items-center justify-center font-bold text-brand-600">${pet.tutor2.name[0].toUpperCase()}</div>
                <div>
-                 <div class="text-sm font-medium text-gray-900">${pet.tutor2.name}</div>
+                 <div class="text-sm font-medium text-gray-900">${pet.tutor2.name} ${pet.tutor2.pending ? '<span class="badge bg-amber-100 text-amber-600 ml-1">Invitación pendiente</span>' : ''}</div>
                  <div class="text-xs text-gray-400">${pet.tutor2.email} · <span class="capitalize">${pet.tutor2.role||'lectura'}</span></div>
                </div>
              </div>`
@@ -1347,6 +1350,8 @@ function tabMedications(pet) {
   const { items: ms, total, pages, page } = paginate(allMs, `med_${pet.id}`);
   const today = new Date().toISOString().slice(0,10);
   const reminderLabels = { exact:'Horario exacto', '15':'15 min antes', '30':'30 min antes', '60':'60 min antes' };
+  const hasActive = (pet.medications||[]).some(m => m.active);
+  const doseGivenToday = (pet.doseLog||[]).some(dl => dl.date === today && dl.given);
   return `
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="flex items-center justify-between mb-4">
@@ -1354,7 +1359,12 @@ function tabMedications(pet) {
           <h3 class="font-semibold text-gray-800">Tratamiento</h3>
           ${total > 0 ? `<p class="text-xs text-gray-400 mt-0.5">${total} registro${total!==1?'s':''}</p>` : ''}
         </div>
-        <button onclick="openMedModal('${pet.id}')" class="btn-primary text-sm">+ Agregar</button>
+        <div class="flex items-center gap-2">
+          ${hasActive ? (doseGivenToday
+            ? `<span class="badge bg-green-100 text-green-700">✓ Dosis de hoy registrada</span>`
+            : `<button onclick="markDoseTaken('${pet.id}')" class="btn-secondary text-sm">🔥 Marcar dosis de hoy</button>`) : ''}
+          <button onclick="openMedModal('${pet.id}')" class="btn-primary text-sm">+ Agregar</button>
+        </div>
       </div>
       ${total === 0
         ? emptyState('💊','Sin tratamientos','Registra tratamientos activos e historial')
@@ -1802,9 +1812,11 @@ function viewFinance() {
       const avgMonthly = Math.round(last90Total / 3);
       if (avgMonthly === 0) return '';
 
-      // Compare last month vs prev month
-      const lastMonthStr = `${now.getFullYear()}-${String(now.getMonth()).padStart(2,'0')}`;
-      const prevMonthStr = `${now.getFullYear()}-${String(now.getMonth()-1).padStart(2,'0')}`;
+      // Compare last month vs prev month (maneja el cruce de año con Date en vez de aritmética de string)
+      const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+      const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 2, 1);
+      const lastMonthStr = `${lastMonthDate.getFullYear()}-${String(lastMonthDate.getMonth()+1).padStart(2,'0')}`;
+      const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth()+1).padStart(2,'0')}`;
       const lastMonthTotal = allExpenses.filter(e=>e.date?.startsWith(lastMonthStr)).reduce((s,e)=>s+Number(e.amount||0),0);
       const prevMonthTotal = allExpenses.filter(e=>e.date?.startsWith(prevMonthStr)).reduce((s,e)=>s+Number(e.amount||0),0);
       const trend = lastMonthTotal > prevMonthTotal ? '↑' : lastMonthTotal < prevMonthTotal ? '↓' : '→';
@@ -2231,18 +2243,50 @@ function openExpenseModal() {
 function openEditPetModal(petId) {
   const p = state.pets.find(x => x.id === petId);
   if (!p) return;
+  state.editPetData = { allergies: [...(p.allergies||[])], chronicConditions: [...(p.chronicConditions||[])] };
+  const allergyOpts = ['Pollo','Pescado','Pasto','Polen','Ácaros','Maíz','Trigo','Soya','Lácteos'];
+  const conditionOpts = ['Ninguna','Diabetes','Epilepsia','Hipotiroidismo','Hipertiroidismo','Displasia de cadera','Displasia de codo','Enfermedad renal crónica','Enfermedad cardíaca','Artritis','Obesidad','Cushing','Addison','Pancreatitis crónica','Enfermedad inflamatoria intestinal','Asma','Dermatitis atópica','Cáncer','Cataratas','Glaucoma','Otra'];
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">Editar mascota</h3>
-      <div class="space-y-3">
+      <div class="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
         <div><label class="form-label">Nombre</label><input id="ep-name" value="${p.name||''}" class="input-field" /></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="form-label">Especie</label>
             <select id="ep-species" class="input-field">${['Perro','Gato','Ave','Conejo','Pez','Hámster','Reptil','Otro'].map(s=>`<option ${p.species===s?'selected':''}>${s}</option>`).join('')}</select>
           </div>
           <div><label class="form-label">Raza</label><input id="ep-breed" value="${p.breed||''}" class="input-field" /></div>
-          <div><label class="form-label">Peso (kg)</label><input id="ep-wkg" type="number" value="${p.weightKg||''}" class="input-field" /></div>
+          <div><label class="form-label">Sexo</label>
+            <select id="ep-sex" class="input-field">${['Macho','Hembra'].map(s=>`<option ${p.sex===s?'selected':''}>${s}</option>`).join('')}</select>
+          </div>
+          <div><label class="form-label">Color</label><input id="ep-color" value="${p.color||''}" class="input-field" /></div>
+          <div><label class="form-label">Peso (kg)</label><input id="ep-wkg" type="number" min="0" value="${p.weightKg||''}" class="input-field" /></div>
+          <div><label class="form-label">Peso (gr)</label><input id="ep-wgr" type="number" min="0" max="999" value="${p.weightGr||''}" class="input-field" /></div>
           <div><label class="form-label">Nacimiento</label><input id="ep-dob" type="date" value="${p.dateOfBirth||''}" class="input-field" /></div>
+          <div><label class="form-label">Estado reproductivo</label>
+            <select id="ep-repro" class="input-field">${['Entero/a','Esterilizado/a','Castrado/a'].map(s=>`<option ${p.reproductiveStatus===s?'selected':''}>${s}</option>`).join('')}</select>
+          </div>
+          <div class="col-span-2"><label class="form-label">Nro. de chip</label><input id="ep-chip" value="${p.chipNumber||''}" class="input-field" /></div>
+        </div>
+        <div>
+          <label class="form-label">Alergias conocidas</label>
+          <div class="flex flex-wrap gap-2 mt-1" id="ep-allergy-tags">
+            ${allergyOpts.map(a => `<button type="button" onclick="toggleEditAllergy('${a}')" class="tag ${(p.allergies||[]).includes(a)?'selected':''}">${a}</button>`).join('')}
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Condiciones crónicas</label>
+          <div class="flex flex-wrap gap-2 mt-1" id="ep-condition-tags">
+            ${conditionOpts.map(c => `<button type="button" onclick="toggleEditCondition('${c}')" class="tag ${(p.chronicConditions||[]).includes(c)?'selected':''}">${c}</button>`).join('')}
+          </div>
+        </div>
+        <hr class="border-gray-100" />
+        <h3 class="font-semibold text-gray-700 text-sm">Veterinario de cabecera</h3>
+        <div class="grid grid-cols-2 gap-3">
+          <div class="col-span-2"><label class="form-label">Nombre</label><input id="ep-vet-name" value="${p.vet?.name||''}" class="input-field" /></div>
+          <div class="col-span-2"><label class="form-label">Clínica</label><input id="ep-vet-clinic" value="${p.vet?.clinic||''}" class="input-field" /></div>
+          <div><label class="form-label">Teléfono</label><input id="ep-vet-phone" value="${p.vet?.phone||''}" class="input-field" /></div>
+          <div><label class="form-label">Email</label><input id="ep-vet-email" value="${p.vet?.email||''}" class="input-field" /></div>
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
@@ -2250,6 +2294,27 @@ function openEditPetModal(petId) {
         </div>
       </div>
     </div>`);
+}
+
+function toggleEditAllergy(a) {
+  const list = state.editPetData.allergies;
+  const idx = list.indexOf(a);
+  if (idx >= 0) list.splice(idx,1); else list.push(a);
+  document.querySelectorAll('#ep-allergy-tags .tag').forEach(el => { if (el.textContent.trim()===a) el.classList.toggle('selected', list.includes(a)); });
+}
+
+function toggleEditCondition(c) {
+  const list = state.editPetData.chronicConditions;
+  if (c === 'Ninguna') {
+    state.editPetData.chronicConditions = list.includes('Ninguna') ? [] : ['Ninguna'];
+  } else {
+    state.editPetData.chronicConditions = list.filter(x => x !== 'Ninguna');
+    const idx = state.editPetData.chronicConditions.indexOf(c);
+    if (idx >= 0) state.editPetData.chronicConditions.splice(idx,1); else state.editPetData.chronicConditions.push(c);
+  }
+  document.querySelectorAll('#ep-condition-tags .tag').forEach(el => {
+    el.classList.toggle('selected', state.editPetData.chronicConditions.includes(el.textContent.trim()));
+  });
 }
 
 // ---- CONTROLADORES ----
@@ -2393,6 +2458,9 @@ async function savePet() {
     avatar_emoji: d.avatar || '',
     vet_name: d.vet?.name || '', vet_clinic: d.vet?.clinic || '',
     vet_phone: d.vet?.phone || '', vet_email: d.vet?.email || '',
+    weight_kg: d.weightKg || null, weight_gr: d.weightGr || null,
+    size_range: d.sizeRange || null, activity_level: d.activityLevel || 2,
+    allergies: d.allergies || [], chronic_conditions: d.chronicConditions || [],
   };
   const { data: petRow, error } = await sb.from('pets').insert(petData).select().single();
   if (error) { showToast('Error al guardar mascota', 'error'); console.error(error); return; }
@@ -2403,9 +2471,12 @@ async function savePet() {
     personalityTags: d.personalityTags || [], allergies: d.allergies || [],
     chronicConditions: d.chronicConditions || [], activityLevel: d.activityLevel || 2,
     weightHistory: [], moodLog: [], symptomsLog: [], meals: [], activities: [], doseLog: [],
+    tutor2: null,
   };
   state.pets.push(pet);
   state.newPetData = {}; state.addPetStep = 1;
+  // Si se completaron los datos del segundo tutor en el wizard, enviamos la invitación
+  if (d.tutor2?.email) await createPetInvite(pet, d.tutor2);
   showToast(`🐾 ${pet.name} registrado con éxito!`, 'success');
   navigate('petProfile', { currentPetId: pet.id, currentTab: 'general' });
 }
@@ -2482,12 +2553,14 @@ async function deletePet(petId) {
   const pet = state.pets.find(p => p.id === petId);
   const hasTwoTutors = pet?.tutor2?.name;
   if (hasTwoTutors) {
-    await sb.from('pets').update({ tutor2: null }).eq('id', petId);
+    if (!isDemoUser()) await sb.from('invitations').delete().eq('pet_id', petId);
     pet.tutor2 = null;
     showToast(`${pet.name} eliminada de tu perfil`, 'success');
   } else {
-    const { error } = await sb.from('pets').delete().eq('id', petId);
-    if (error) { showToast('Error al eliminar', 'error'); return; }
+    if (!isDemoUser()) {
+      const { error } = await sb.from('pets').delete().eq('id', petId);
+      if (error) { showToast('Error al eliminar', 'error'); return; }
+    }
     state.pets = state.pets.filter(p => p.id !== petId);
     showToast(`${pet?.name} eliminada`, 'error');
   }
@@ -2502,13 +2575,27 @@ async function saveEditPet(petId) {
   const name = g('ep-name') || p.name;
   const species = g('ep-species') || p.species;
   const breed = g('ep-breed');
-  const weightKg = g('ep-wkg');
+  const sex = g('ep-sex'), color = g('ep-color');
+  const weightKg = g('ep-wkg') || null, weightGr = g('ep-wgr') || null;
   const dateOfBirth = g('ep-dob');
-  const { error } = await sb.from('pets').update({
-    name, species, breed, date_of_birth: dateOfBirth || null
-  }).eq('id', petId);
-  if (error) { showToast('Error al guardar', 'error'); return; }
-  Object.assign(p, { name, species, breed, dateOfBirth });
+  const reproductiveStatus = g('ep-repro');
+  const chipNumber = g('ep-chip');
+  const vet = { name: g('ep-vet-name')||'', clinic: g('ep-vet-clinic')||'', phone: g('ep-vet-phone')||'', email: g('ep-vet-email')||'' };
+  const allergies = state.editPetData?.allergies || p.allergies || [];
+  const chronicConditions = state.editPetData?.chronicConditions || p.chronicConditions || [];
+  if (!isDemoUser()) {
+    const { error } = await sb.from('pets').update({
+      name, species, breed, date_of_birth: dateOfBirth || null, sex, color,
+      reproductive_status: reproductiveStatus, microchip: chipNumber,
+      weight_kg: weightKg, weight_gr: weightGr,
+      allergies, chronic_conditions: chronicConditions,
+      vet_name: vet.name, vet_clinic: vet.clinic, vet_phone: vet.phone, vet_email: vet.email,
+    }).eq('id', petId);
+    if (error) { showToast('Error al guardar', 'error'); console.error(error); return; }
+  }
+  Object.assign(p, { name, species, breed, dateOfBirth, sex, color, weightKg, weightGr,
+    reproductiveStatus, chipNumber, allergies, chronicConditions, vet });
+  state.editPetData = null;
   closeModal(); render();
   showToast('Cambios guardados', 'success');
 }
@@ -2588,34 +2675,65 @@ async function saveMedication(e, petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const freq = g('m-freq'), freqUnit = g('m-freq-unit');
-  const startDate = g('m-start-date'), startTime = g('m-start-time');
-  const durationDays = g('m-days');
-  const { data, error } = await sb.from('medications').insert({
-    pet_id: petId,
-    medication: g('m-name'), dose: g('m-dose'), unit: g('m-unit'),
-    frequency: freq, freq_unit: freqUnit,
-    start_date: startDate, start_time: startTime, duration_days: durationDays,
-    stock_qty: g('m-stock-qty'), stock_unit: g('m-stock-unit'), stock_expiry: g('m-stock-expiry'),
-    reminder_min: g('m-reminder'), notes: g('m-notes')
-  }).select().single();
-  if (error) { showToast('Error al guardar medicamento', 'error'); return; }
+  const name = g('m-name'), doseVal = g('m-dose-val'), doseUnit = g('m-unit');
+  const freqN = g('m-freq-n'), freqUnit = g('m-freq-unit');
+  const startDate = g('m-start'), startTime = g('m-start-time');
+  const treatmentDays = g('m-days') ? parseInt(g('m-days')) : null;
+  const active = document.getElementById('m-active')?.checked ?? true;
+  const cost = g('m-cost') || null;
+  const stockTotal = g('m-stock-total') || null, stockUnit = g('m-stock-unit');
+  const expiry = g('m-expiry') || null;
+  const reminder = g('m-reminder');
+  const frequency = freqN ? `Cada ${freqN} ${freqUnit === 'horas' ? 'horas' : 'días'}` : '';
+  let endDate = null;
+  if (treatmentDays && startDate) {
+    const d = new Date(startDate + 'T12:00:00'); d.setDate(d.getDate() + treatmentDays);
+    endDate = d.toISOString().slice(0,10);
+  }
+  const med = { name, doseVal, doseUnit, dose: `${doseVal||''} ${doseUnit||''}`.trim(),
+    freqN, freqUnit, frequency, startDate, startTime, treatmentDays, endDate,
+    active, reminder, stockTotal, stockUnit, expiry, cost };
   pet.medications = pet.medications || [];
-  pet.medications.push({
-    id: data.id, medication: data.medication, dose: data.dose, unit: data.unit,
-    frequency: data.frequency, freqUnit: data.freq_unit,
-    startDate: data.start_date, startTime: data.start_time, durationDays: data.duration_days,
-    stockQty: data.stock_qty, stockUnit: data.stock_unit, stockExpiry: data.stock_expiry,
-    reminderMin: data.reminder_min, notes: data.notes
-  });
+  if (isDemoUser()) {
+    pet.medications.push({ id: genId(), ...med });
+  } else {
+    const { data, error } = await sb.from('medications').insert({
+      pet_id: petId, name, dose_val: doseVal || null, dose_unit: doseUnit,
+      freq_n: freqN || null, freq_unit: freqUnit,
+      start_date: startDate, start_time: startTime, treatment_days: treatmentDays, end_date: endDate,
+      active, reminder, stock_qty: stockTotal, stock_unit: stockUnit, expiry_date: expiry, cost
+    }).select().single();
+    if (error) { showToast('Error al guardar medicamento', 'error'); console.error(error); return; }
+    pet.medications.push({ id: data.id, ...med });
+  }
   closeModal(); render();
   showToast('Medicamento guardado ✅', 'success');
 }
 
 async function deleteMedication(petId, mId) {
   const pet = state.pets.find(p => p.id === petId);
-  await sb.from('medications').delete().eq('id', mId);
+  if (!isDemoUser()) await sb.from('medications').delete().eq('id', mId);
   if (pet) { pet.medications = pet.medications.filter(m => m.id !== mId); render(); }
+}
+
+async function markDoseTaken(petId) {
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  const today = new Date().toISOString().slice(0,10);
+  const activeMed = (pet.medications||[]).find(m => m.active);
+  pet.doseLog = pet.doseLog || [];
+  if (pet.doseLog.some(dl => dl.date === today && dl.given)) return;
+  if (isDemoUser()) {
+    pet.doseLog.push({ id: genId(), medicationId: activeMed?.id || null, date: today, given: true });
+  } else {
+    const { data, error } = await sb.from('dose_logs').insert({
+      pet_id: petId, med_id: activeMed?.id || null, date: today, confirmed: true
+    }).select().single();
+    if (error) { showToast('Error al registrar la dosis', 'error'); console.error(error); return; }
+    pet.doseLog.push({ id: data.id, medicationId: data.med_id, date: data.date, given: data.confirmed });
+  }
+  render();
+  showToast('¡Dosis de hoy registrada! 🔥', 'success');
 }
 
 function previewHistoryFiles(input) {
@@ -2646,21 +2764,30 @@ async function saveHistory(e, petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const { data, error } = await sb.from('clinical_history').insert({
-    pet_id: petId, title: g('h-title'), type: g('h-type'), date: g('h-date'),
-    doctor: g('h-doctor'), clinic: g('h-clinic'), cost: g('h-cost'), notes: g('h-notes')
-  }).select().single();
-  if (error) { showToast('Error al guardar', 'error'); return; }
+  const filesInput = document.getElementById('h-files');
+  const files = filesInput?.files?.length ? await readFilesAsBase64(filesInput) : [];
+  const record = { title: g('h-title'), type: g('h-type'), date: g('h-date'),
+    doctor: g('h-doctor'), clinic: g('h-clinic'), cost: g('h-cost') || null, notes: g('h-notes'), files };
   pet.clinicalHistory = pet.clinicalHistory || [];
-  pet.clinicalHistory.push({ id: data.id, title: data.title, type: data.type, date: data.date,
-    doctor: data.doctor, clinic: data.clinic, cost: data.cost, notes: data.notes });
+  if (isDemoUser()) {
+    pet.clinicalHistory.push({ id: genId(), ...record });
+  } else {
+    // `files` es text[] en la base — cada archivo se guarda como un string JSON
+    const { data, error } = await sb.from('history_records').insert({
+      pet_id: petId, title: record.title, type: record.type, date: record.date,
+      vet: record.doctor, clinic: record.clinic, cost: record.cost, notes: record.notes,
+      files: files.map(f => JSON.stringify(f))
+    }).select().single();
+    if (error) { showToast('Error al guardar', 'error'); console.error(error); return; }
+    pet.clinicalHistory.push({ id: data.id, ...record });
+  }
   closeModal(); render();
   showToast('Registro guardado ✅', 'success');
 }
 
 async function deleteHistory(petId, hId) {
   const pet = state.pets.find(p => p.id === petId);
-  await sb.from('clinical_history').delete().eq('id', hId);
+  if (!isDemoUser()) await sb.from('history_records').delete().eq('id', hId);
   if (pet) { pet.clinicalHistory = pet.clinicalHistory.filter(h => h.id !== hId); render(); }
 }
 
@@ -2994,6 +3121,13 @@ function injectStyles() {
 }
 
 // ---- VISTA: BOTIQUÍN ----
+function botiquinStatus(item) {
+  const qty = Number(item.quantity || 0);
+  if (qty <= 0) return 'agotado';
+  if (qty <= 5) return 'por_agotarse';
+  return 'disponible';
+}
+
 function viewBotiquin() {
   const pets = state.pets;
   const allMeds = pets.flatMap(p => (p.medications||[]).map(m => ({ ...m, petName: p.name, petId: p.id })));
@@ -3008,8 +3142,62 @@ function viewBotiquin() {
   if (filterStatus === 'expired')  displayed = displayed.filter(m => m.expiry && m.expiry < today);
   if (filterStatus === 'finished') displayed = displayed.filter(m => !m.active);
 
+  const inventory = state.botiquin || [];
+  const statusLabel = { disponible: 'Disponible', por_agotarse: 'Por agotarse', agotado: 'Agotado' };
+  const statusColor = { disponible: 'bg-green-100 text-green-700', por_agotarse: 'bg-amber-100 text-amber-700', agotado: 'bg-red-100 text-red-600' };
+  const invExpiringSoon = inventory.filter(i => i.expiryDate && i.expiryDate <= new Date(Date.now()+30*86400000).toISOString().slice(0,10));
+  const invLowStock = inventory.filter(i => botiquinStatus(i) !== 'disponible');
+
   return appShell(`
-    ${pageHeader('Botiquín 🧴', 'Resumen de medicamentos de todas tus mascotas')}
+    ${pageHeader('Botiquín 🧴', 'Inventario del hogar y medicamentos de todas tus mascotas')}
+
+    <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+      <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <div>
+          <h3 class="font-semibold text-gray-700">Inventario del hogar</h3>
+          <p class="text-xs text-gray-400 mt-0.5">Insumos y medicamentos que guardas en casa (no ligados a un tratamiento activo)</p>
+        </div>
+        <button onclick="openBotiquinItemModal()" class="btn-primary text-sm">+ Agregar item</button>
+      </div>
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        ${statCard('📦','Items', inventory.length, 'brand')}
+        ${statCard('⚠️','Stock bajo', invLowStock.length, 'amber')}
+        ${statCard('📅','Por vencer (30d)', invExpiringSoon.length, 'red')}
+      </div>
+      ${inventory.length === 0
+        ? emptyState('🧴','Sin items en el inventario','Agrega vendas, jeringas u otros insumos que tengas en casa')
+        : `<div class="divide-y divide-gray-50">
+             ${inventory.map(item => {
+               const st = botiquinStatus(item);
+               const isExpired = item.expiryDate && item.expiryDate < today;
+               return `
+               <div class="flex items-center gap-3 py-3">
+                 <div class="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-lg flex-shrink-0">🧴</div>
+                 <div class="flex-1 min-w-0">
+                   <div class="flex items-center gap-2 flex-wrap">
+                     <span class="font-medium text-gray-900 text-sm">${item.name}</span>
+                     ${item.category ? `<span class="badge bg-gray-100 text-gray-500 text-xs">${item.category}</span>` : ''}
+                     <span class="badge text-xs ${statusColor[st]}">${statusLabel[st]}</span>
+                   </div>
+                   <div class="text-xs mt-0.5 text-gray-400">
+                     ${item.quantity ?? 0} ${item.unit||''}
+                     ${item.expiryDate ? ` · <span class="${isExpired?'text-red-500':'text-gray-400'}">${isExpired?'⚠️ Venció':'Vence'} ${formatDate(item.expiryDate)}</span>` : ''}
+                   </div>
+                 </div>
+                 <div class="flex items-center gap-1 flex-shrink-0">
+                   <button onclick="openBotiquinItemModal('${item.id}')" title="Editar"
+                     class="w-8 h-8 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 flex items-center justify-center transition-colors">
+                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                   </button>
+                   <button onclick="deleteBotiquinItem('${item.id}')" title="Eliminar"
+                     class="w-8 h-8 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors">
+                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                   </button>
+                 </div>
+               </div>`;
+             }).join('')}
+           </div>`}
+    </div>
 
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
       ${statCard('💊','Total', allMeds.length, 'brand')}
@@ -3033,7 +3221,7 @@ function viewBotiquin() {
 
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h3 class="font-semibold text-gray-700">Todos los medicamentos</h3>
+        <h3 class="font-semibold text-gray-700">Tratamientos activos por mascota</h3>
         <div class="flex items-center gap-2 flex-wrap">
           <select onchange="state.botiquinFilter=this.value;render()" class="input-field text-sm py-1.5 w-auto">
             <option value="">Todas las mascotas</option>
@@ -3078,6 +3266,80 @@ function viewBotiquin() {
       })()}
     </div>
   `);
+}
+
+function openBotiquinItemModal(itemId) {
+  const item = itemId ? (state.botiquin||[]).find(i => i.id === itemId) : null;
+  const categories = ['Medicamento','Vendaje','Higiene','Alimento','Accesorio','Otro'];
+  const units = ['unidades','comprimidos','ml','mg','cajas','frascos'];
+  openModal(`
+    <div class="modal-box p-4 sm:p-6">
+      <h3 class="text-lg font-bold text-gray-900 mb-4">${item ? '✏️ Editar item' : '🧴 Agregar item al botiquín'}</h3>
+      <form onsubmit="saveBotiquinItem(event${item ? `,'${item.id}'` : ''})" class="space-y-3">
+        <div><label class="form-label">Nombre *</label><input id="bq-name" required value="${item?.name||''}" placeholder="Ej: Vendas elásticas" class="input-field" /></div>
+        <div class="grid grid-cols-2 gap-3">
+          <div><label class="form-label">Categoría</label>
+            <select id="bq-category" class="input-field">${categories.map(c=>`<option ${c===item?.category?'selected':''}>${c}</option>`).join('')}</select>
+          </div>
+          <div><label class="form-label">Mascota (opcional)</label>
+            <select id="bq-pet" class="input-field">
+              <option value="">General</option>
+              ${state.pets.map(p=>`<option value="${p.id}" ${p.id===item?.petId?'selected':''}>${p.name}</option>`).join('')}
+            </select>
+          </div>
+          <div><label class="form-label">Cantidad *</label><input id="bq-qty" type="number" min="0" step="0.1" required value="${item?.quantity??''}" class="input-field" /></div>
+          <div><label class="form-label">Unidad</label>
+            <select id="bq-unit" class="input-field">${units.map(u=>`<option ${u===item?.unit?'selected':''}>${u}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div><label class="form-label">Fecha de caducidad (opcional)</label><input id="bq-expiry" type="date" value="${item?.expiryDate||''}" class="input-field" /></div>
+        <div><label class="form-label">Notas</label><textarea id="bq-notes" rows="2" class="input-field resize-none">${item?.notes||''}</textarea></div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
+          <button type="submit" class="btn-primary flex-1">Guardar</button>
+        </div>
+      </form>
+    </div>`);
+}
+
+async function saveBotiquinItem(e, itemId) {
+  e.preventDefault();
+  const g = id => document.getElementById(id)?.value;
+  const name = g('bq-name'), category = g('bq-category'), petId = g('bq-pet') || null;
+  const quantity = parseFloat(g('bq-qty') || 0), unit = g('bq-unit');
+  const expiryDate = g('bq-expiry') || null, notes = g('bq-notes');
+  const status = botiquinStatus({ quantity });
+  state.botiquin = state.botiquin || [];
+  if (isDemoUser()) {
+    if (itemId) {
+      const item = state.botiquin.find(i => i.id === itemId);
+      if (item) Object.assign(item, { name, category, petId, quantity, unit, expiryDate, notes, status });
+    } else {
+      state.botiquin.push({ id: genId(), name, category, petId, quantity, unit, expiryDate, notes, status });
+    }
+  } else if (itemId) {
+    const { error } = await sb.from('botiquin_items').update({
+      name, type: category, pet_id: petId, quantity, unit, expiry_date: expiryDate, notes
+    }).eq('id', itemId);
+    if (error) { showToast('Error al guardar', 'error'); console.error(error); return; }
+    const item = state.botiquin.find(i => i.id === itemId);
+    if (item) Object.assign(item, { name, category, petId, quantity, unit, expiryDate, notes, status });
+  } else {
+    const { data, error } = await sb.from('botiquin_items').insert({
+      user_id: state.user.id, name, type: category, pet_id: petId, quantity, unit, expiry_date: expiryDate, notes
+    }).select().single();
+    if (error) { showToast('Error al guardar', 'error'); console.error(error); return; }
+    state.botiquin.push({ id: data.id, petId: data.pet_id, name: data.name, category: data.type,
+      quantity: data.quantity, unit: data.unit, expiryDate: data.expiry_date, notes: data.notes, status });
+  }
+  closeModal(); render();
+  showToast('Item guardado ✅', 'success');
+}
+
+async function deleteBotiquinItem(itemId) {
+  if (!isDemoUser()) await sb.from('botiquin_items').delete().eq('id', itemId);
+  state.botiquin = (state.botiquin||[]).filter(i => i.id !== itemId);
+  render();
 }
 
 // ---- TAB: SEGUIMIENTO ----
@@ -3440,15 +3702,19 @@ async function saveMood(petId) {
   const today = new Date().toISOString().slice(0, 10);
   // Remove existing entry for today if any, then insert new one
   const existing = (pet.moodLog || []).find(m => m.date === today);
-  if (existing?.id) {
-    await sb.from('mood_log').delete().eq('id', existing.id);
-  }
-  const { data, error } = await sb.from('mood_log').insert({
-    pet_id: petId, date: today, mood, notes
-  }).select().single();
-  if (error) { showToast('Error al guardar estado de ánimo', 'error'); return; }
   pet.moodLog = (pet.moodLog || []).filter(m => m.date !== today);
-  pet.moodLog.push({ id: data.id, date: data.date, mood: data.mood, energy: data.energy, notes: data.notes });
+  if (isDemoUser()) {
+    pet.moodLog.push({ id: genId(), date: today, mood, notes });
+  } else {
+    if (existing?.id) {
+      await sb.from('mood_logs').delete().eq('id', existing.id);
+    }
+    const { data, error } = await sb.from('mood_logs').insert({
+      pet_id: petId, date: today, mood, notes
+    }).select().single();
+    if (error) { showToast('Error al guardar estado de ánimo', 'error'); return; }
+    pet.moodLog.push({ id: data.id, date: data.date, mood: data.mood, energy: data.energy, notes: data.notes });
+  }
   closeModal(); render();
   showToast('Estado de ánimo registrado ✓', 'success');
 }
@@ -3503,12 +3769,16 @@ async function saveSymptoms(petId) {
   if (!selected.length) { showToast('Selecciona al menos un síntoma', 'error'); return; }
   const date = document.getElementById('sym-date')?.value;
   const notes = document.getElementById('sym-notes')?.value || '';
-  const { data, error } = await sb.from('symptoms_log').insert({
-    pet_id: petId, date, symptoms: selected, notes
-  }).select().single();
-  if (error) { showToast('Error al guardar síntomas', 'error'); return; }
   pet.symptomsLog = pet.symptomsLog || [];
-  pet.symptomsLog.push({ id: data.id, date: data.date, symptoms: data.symptoms, severity: data.severity, notes: data.notes });
+  if (isDemoUser()) {
+    pet.symptomsLog.push({ id: genId(), date, symptoms: selected, notes });
+  } else {
+    const { data, error } = await sb.from('symptoms_logs').insert({
+      pet_id: petId, date, symptoms: selected, notes
+    }).select().single();
+    if (error) { showToast('Error al guardar síntomas', 'error'); return; }
+    pet.symptomsLog.push({ id: data.id, date: data.date, symptoms: data.symptoms, severity: data.severity, notes: data.notes });
+  }
   closeModal(); render();
   showToast('Síntomas registrados ✓', 'success');
 }
@@ -3567,15 +3837,19 @@ async function saveMeal(e, petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const { data, error } = await sb.from('meals').insert({
-    pet_id: petId, date: g('ml-date'), time: g('ml-time'),
-    food: g('ml-type'), portion: parseFloat(g('ml-amount') || 0),
-    portion_unit: g('ml-unit'), notes: g('ml-notes')
-  }).select().single();
-  if (error) { showToast('Error al guardar comida', 'error'); return; }
+  const date = g('ml-date'), time = g('ml-time'), food = g('ml-type');
+  const portion = parseFloat(g('ml-amount') || 0), portionUnit = g('ml-unit'), notes = g('ml-notes');
   pet.meals = pet.meals || [];
-  pet.meals.push({ id: data.id, date: data.date, time: data.time, food: data.food,
-    portion: data.portion, portionUnit: data.portion_unit, notes: data.notes });
+  if (isDemoUser()) {
+    pet.meals.push({ id: genId(), date, time, food, portion, portionUnit, notes });
+  } else {
+    const { data, error } = await sb.from('meals').insert({
+      pet_id: petId, date, time_of_day: time, type: food, amount: portion, unit: portionUnit, notes
+    }).select().single();
+    if (error) { showToast('Error al guardar comida', 'error'); console.error(error); return; }
+    pet.meals.push({ id: data.id, date: data.date, time: data.time_of_day, food: data.type,
+      portion: data.amount, portionUnit: data.unit, notes: data.notes });
+  }
   closeModal(); render();
   showToast('Comida registrada ✓', 'success');
 }
@@ -3626,13 +3900,20 @@ async function saveActivity(e, petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
   const g = id => document.getElementById(id)?.value;
-  const { data, error } = await sb.from('activities').insert({
-    pet_id: petId, date: g('ac-date'), type: g('ac-type'),
-    duration: parseInt(g('ac-duration') || 0), notes: g('ac-notes')
-  }).select().single();
-  if (error) { showToast('Error al guardar actividad', 'error'); return; }
+  const date = g('ac-date'), type = g('ac-type');
+  const duration = parseInt(g('ac-duration') || 0);
+  const distance = g('ac-distance') ? parseFloat(g('ac-distance')) : null;
+  const notes = g('ac-notes');
   pet.activities = pet.activities || [];
-  pet.activities.push({ id: data.id, date: data.date, type: data.type, duration: data.duration, notes: data.notes });
+  if (isDemoUser()) {
+    pet.activities.push({ id: genId(), date, type, duration, distance, notes });
+  } else {
+    const { data, error } = await sb.from('activities').insert({
+      pet_id: petId, date, type, duration, distance, notes
+    }).select().single();
+    if (error) { showToast('Error al guardar actividad', 'error'); return; }
+    pet.activities.push({ id: data.id, date: data.date, type: data.type, duration: data.duration, distance: data.distance, notes: data.notes });
+  }
   closeModal(); render();
   showToast('Actividad registrada ✓', 'success');
 }
@@ -3814,10 +4095,10 @@ function loadDemoAndLogin() {
       { date: dt(2026,5,10), type: 'Paseo', duration: 50, distance: 3.8, notes: '' },
     ],
     doseLog: [
-      { date: dt(2026,5,8), confirmed: true }, { date: dt(2026,5,9), confirmed: true },
-      { date: dt(2026,5,10), confirmed: true }, { date: dt(2026,5,11), confirmed: true },
-      { date: dt(2026,5,12), confirmed: true }, { date: dt(2026,5,13), confirmed: true },
-      { date: dt(2026,5,14), confirmed: true },
+      { date: dt(2026,5,8), given: true }, { date: dt(2026,5,9), given: true },
+      { date: dt(2026,5,10), given: true }, { date: dt(2026,5,11), given: true },
+      { date: dt(2026,5,12), given: true }, { date: dt(2026,5,13), given: true },
+      { date: dt(2026,5,14), given: true },
     ],
     bcs: 5,
   };
@@ -3891,9 +4172,9 @@ function loadDemoAndLogin() {
       { date: dt(2026,5,10), type: 'Juego', duration: 15, distance: null, notes: '' },
     ],
     doseLog: [
-      { date: dt(2026,5,10), confirmed: true }, { date: dt(2026,5,11), confirmed: true },
-      { date: dt(2026,5,12), confirmed: true }, { date: dt(2026,5,13), confirmed: true },
-      { date: dt(2026,5,14), confirmed: true },
+      { date: dt(2026,5,10), given: true }, { date: dt(2026,5,11), given: true },
+      { date: dt(2026,5,12), given: true }, { date: dt(2026,5,13), given: true },
+      { date: dt(2026,5,14), given: true },
     ],
     bcs: 4,
   };
@@ -4016,6 +4297,11 @@ function loadDemoAndLogin() {
     pets: [greta, luna, coco],
     events,
     expenses: buildExpenses([greta, luna, coco]),
+    botiquin: [
+      { id: genId(), name: 'Vendas elásticas', category: 'Vendaje', petId: null, quantity: 3, unit: 'unidades', expiryDate: null, notes: '', status: 'disponible' },
+      { id: genId(), name: 'Jeringas 5ml', category: 'Accesorio', petId: null, quantity: 4, unit: 'unidades', expiryDate: dt(2027,3,1), notes: '', status: 'por_agotarse' },
+      { id: genId(), name: 'Suero fisiológico', category: 'Higiene', petId: null, quantity: 0, unit: 'frascos', expiryDate: dt(2026,10,1), notes: 'Reponer en próxima compra', status: 'agotado' },
+    ],
   };
 
   Object.assign(state, demoState);
@@ -4060,17 +4346,25 @@ function openEditVaccineModal(petId, vaccineId) {
     </div>`);
 }
 
-function saveEditVaccine(e, petId, vaccineId) {
+async function saveEditVaccine(e, petId, vaccineId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   const v = pet?.vaccines?.find(x => x.id === vaccineId);
   if (!v) return;
   const g = id => document.getElementById(id)?.value;
   const date = g('ev-date'), period = g('ev-period');
-  v.name = g('ev-name'); v.code = g('ev-code'); v.date = date;
-  v.periodicity = period; v.nextDate = period ? addMonths(date, parseFloat(period)) : '';
-  v.cost = g('ev-cost');
-  saveState(); closeModal(); render();
+  const name = g('ev-name'), code = g('ev-code'), cost = g('ev-cost') || null;
+  const nextDate = period ? addMonths(date, parseFloat(period)) : '';
+  if (!isDemoUser()) {
+    const { error } = await sb.from('vaccines').update({
+      name, code, date, periodicity: period, next_date: nextDate, cost
+    }).eq('id', vaccineId);
+    if (error) { showToast('Error al guardar cambios', 'error'); console.error(error); return; }
+  }
+  v.name = name; v.code = code; v.date = date;
+  v.periodicity = period; v.nextDate = nextDate;
+  v.cost = cost;
+  closeModal(); render();
   showToast('Vacuna actualizada ✓', 'success');
 }
 
@@ -4107,16 +4401,24 @@ function openEditDewormModal(petId, dewormId) {
     </div>`);
 }
 
-function saveEditDeworming(e, petId, dewormId) {
+async function saveEditDeworming(e, petId, dewormId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   const d = pet?.deworming?.find(x => x.id === dewormId);
   if (!d) return;
   const g = id => document.getElementById(id)?.value;
-  d.product = g('edw-product'); d.type = g('edw-type');
-  d.format = g('edw-format'); d.dose = g('edw-dose');
-  d.date = g('edw-date'); d.cost = g('edw-cost');
-  saveState(); closeModal(); render();
+  const product = g('edw-product'), type = g('edw-type'), format = g('edw-format');
+  const dose = g('edw-dose'), date = g('edw-date'), cost = g('edw-cost') || null;
+  if (!isDemoUser()) {
+    const { error } = await sb.from('dewormings').update({
+      product, type, format, dose, date, cost
+    }).eq('id', dewormId);
+    if (error) { showToast('Error al guardar cambios', 'error'); console.error(error); return; }
+  }
+  d.product = product; d.type = type;
+  d.format = format; d.dose = dose;
+  d.date = date; d.cost = cost;
+  closeModal(); render();
   showToast('Desparasitación actualizada ✓', 'success');
 }
 
@@ -4154,7 +4456,7 @@ function openEditMedModal(petId, medId) {
     </div>`);
 }
 
-function saveEditMedication(e, petId, medId) {
+async function saveEditMedication(e, petId, medId) {
   e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   const m = pet?.medications?.find(x => x.id === medId);
@@ -4162,17 +4464,30 @@ function saveEditMedication(e, petId, medId) {
   const g = id => document.getElementById(id)?.value;
   const days = parseInt(g('em-days') || 0);
   const startDate = g('em-start');
-  m.name = g('em-name');
-  m.doseVal = g('em-dose-val'); m.doseUnit = g('em-unit');
-  m.dose = `${m.doseVal} ${m.doseUnit}`;
-  m.startDate = startDate; m.treatmentDays = days;
+  const name = g('em-name'), doseVal = g('em-dose-val'), doseUnit = g('em-unit');
+  const expiry = g('em-expiry') || null, cost = g('em-cost') || null;
+  const active = document.getElementById('em-active')?.checked;
+  let endDate = m.endDate || null;
   if (days && startDate) {
     const d = new Date(startDate + 'T12:00:00'); d.setDate(d.getDate() + days);
-    m.endDate = d.toISOString().slice(0,10);
+    endDate = d.toISOString().slice(0,10);
   }
-  m.expiry = g('em-expiry'); m.cost = g('em-cost');
-  m.active = document.getElementById('em-active')?.checked;
-  saveState(); closeModal(); render();
+  if (!isDemoUser()) {
+    const { error } = await sb.from('medications').update({
+      name, dose_val: doseVal || null, dose_unit: doseUnit,
+      start_date: startDate, treatment_days: days || null, end_date: endDate,
+      expiry_date: expiry, cost, active
+    }).eq('id', medId);
+    if (error) { showToast('Error al guardar cambios', 'error'); console.error(error); return; }
+  }
+  m.name = name;
+  m.doseVal = doseVal; m.doseUnit = doseUnit;
+  m.dose = `${doseVal||''} ${doseUnit||''}`.trim();
+  m.startDate = startDate; m.treatmentDays = days;
+  m.endDate = endDate;
+  m.expiry = expiry; m.cost = cost;
+  m.active = active;
+  closeModal(); render();
   showToast('Tratamiento actualizado ✓', 'success');
 }
 
@@ -4255,12 +4570,19 @@ async function saveEditHistory(e, petId, histId) {
   const g = id => document.getElementById(id)?.value;
   const filesInput = document.getElementById('eh-files');
   const newFiles = filesInput?.files?.length ? await readFilesAsBase64(filesInput) : [];
-  h.title  = g('eh-title'); h.type   = g('eh-type');
-  h.date   = g('eh-date');  h.doctor = g('eh-doctor');
-  h.clinic = g('eh-clinic'); h.cost  = g('eh-cost');
-  h.notes  = g('eh-notes');
-  h.files  = [...(h.files||[]), ...newFiles];
-  saveState(); closeModal(); render();
+  const title = g('eh-title'), type = g('eh-type'), date = g('eh-date');
+  const doctor = g('eh-doctor'), clinic = g('eh-clinic'), cost = g('eh-cost') || null, notes = g('eh-notes');
+  const files = [...(h.files||[]), ...newFiles];
+  if (!isDemoUser()) {
+    const { error } = await sb.from('history_records').update({
+      title, type, date, vet: doctor, clinic, cost, notes,
+      files: files.map(f => JSON.stringify(f))
+    }).eq('id', histId);
+    if (error) { showToast('Error al guardar cambios', 'error'); console.error(error); return; }
+  }
+  h.title = title; h.type = type; h.date = date; h.doctor = doctor;
+  h.clinic = clinic; h.cost = cost; h.notes = notes; h.files = files;
+  closeModal(); render();
   showToast('Evento actualizado ✓', 'success');
 }
 
@@ -4289,19 +4611,24 @@ function openInviteTutor2Modal(petId) {
     </div>`);
 }
 
-async function sendTutor2Invite(e, petId) {
-  e.preventDefault();
-  const pet = state.pets.find(p => p.id === petId);
-  if (!pet) return;
-  const name  = document.getElementById('t2-inv-name')?.value?.trim();
-  const email = document.getElementById('t2-inv-email')?.value?.trim().toLowerCase();
-  const role  = document.getElementById('t2-inv-role')?.value;
+// Crea la invitación (tabla invitations) y dispara el magic link de Supabase.
+// Se usa tanto desde el wizard de alta (paso 4) como desde el botón "+ Invitar"
+// del perfil de la mascota. En modo demo no hay sesión real de Supabase, así que
+// solo simulamos el estado "pendiente" localmente.
+async function createPetInvite(pet, { name, email, role }) {
+  if (isDemoUser()) {
+    pet.tutor2 = { name, email, role, pending: true };
+    showToast(`✅ Invitación simulada para ${email} (modo demo)`, 'success');
+    return true;
+  }
   const token = genId() + genId();
-  const invites = getInvites();
-  invites.push({ token, petId, petName: pet.name, inviterEmail: state.user?.email, invitedEmail: email, invitedName: name, role, createdAt: Date.now(), used: false });
-  saveInvites(invites);
   const link = `${location.origin}${location.pathname}?invite=${token}`;
-  console.log(`[MyPets] Invitation link for ${email}: ${link}`);
+  const expiresAt = new Date(Date.now() + 7 * 86400000).toISOString();
+  const { error: inviteError } = await sb.from('invitations').insert({
+    token, pet_id: pet.id, pet_name: pet.name, inviter_id: state.user.id,
+    invited_email: email, invited_name: name, role, used: false, expires_at: expiresAt,
+  });
+  if (inviteError) { showToast('Error al crear la invitación', 'error'); console.error(inviteError); return false; }
   // Enviado vía Supabase Auth (magic link) en vez de un tercero: requiere SMTP
   // configurado en el proyecto de Supabase (Auth → Emails → SMTP Settings).
   const { error } = await sb.auth.signInWithOtp({
@@ -4311,20 +4638,58 @@ async function sendTutor2Invite(e, petId) {
       data: { invited_name: name, pet_name: pet.name, inviter_name: state.user?.name || '', role },
     },
   });
-  if (error) { showToast('Error al enviar la invitación', 'error'); console.error(error); return; }
-  showToast(`✅ Invitación enviada a ${email}`, 'success');
-  // Guardamos como tutor pendiente
+  if (error) { showToast('Error al enviar el correo de invitación', 'error'); console.error(error); return false; }
   pet.tutor2 = { name, email, role, pending: true };
-  saveState(); closeModal(); render();
+  showToast(`✅ Invitación enviada a ${email}`, 'success');
+  return true;
 }
 
-function removeTutor2(petId) {
+// Se ejecuta cuando alguien llega a la app desde el link del magic link (?invite=TOKEN).
+// El magic link ya autentica a la persona invitada — solo falta darle acceso a la mascota.
+async function acceptPetInvite(token) {
+  const { data: invite, error } = await sb.from('invitations').select('*').eq('token', token).eq('used', false).maybeSingle();
+  if (error || !invite) return;
+  if ((invite.invited_email || '').toLowerCase() !== (state.user?.email || '').toLowerCase()) {
+    showToast('Esta invitación fue enviada a otro correo', 'error');
+    return;
+  }
+  if (invite.expires_at && new Date(invite.expires_at) < new Date()) {
+    showToast('Esta invitación ya expiró', 'error');
+    return;
+  }
+  const { error: accessError } = await sb.from('pet_access').insert({
+    pet_id: invite.pet_id, user_id: state.user.id, role: invite.role === 'edicion' ? 'editor' : 'viewer'
+  });
+  if (accessError) { showToast('No se pudo aceptar la invitación', 'error'); console.error(accessError); return; }
+  await sb.from('invitations').update({ used: true }).eq('token', token);
+  showToast(`🎉 Ahora tienes acceso a ${invite.pet_name}`, 'success');
+  await loadDataFromSupabase();
+}
+
+async function sendTutor2Invite(e, petId) {
+  e.preventDefault();
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
-  if (confirm(`¿Quitar a ${pet.tutor2?.name} como segundo tutor de ${pet.name}?`)) {
-    pet.tutor2 = null; saveState(); render();
-    showToast('Segundo tutor eliminado', 'success');
+  const name  = document.getElementById('t2-inv-name')?.value?.trim();
+  const email = document.getElementById('t2-inv-email')?.value?.trim().toLowerCase();
+  const role  = document.getElementById('t2-inv-role')?.value;
+  const ok = await createPetInvite(pet, { name, email, role });
+  if (ok) { closeModal(); render(); }
+}
+
+async function removeTutor2(petId) {
+  const pet = state.pets.find(p => p.id === petId);
+  if (!pet) return;
+  if (!confirm(`¿Quitar a ${pet.tutor2?.name} como segundo tutor de ${pet.name}?`)) return;
+  if (!isDemoUser()) {
+    await sb.from('invitations').delete().eq('pet_id', petId).eq('invited_email', pet.tutor2.email);
+    if (!pet.tutor2.pending) {
+      // Ya había aceptado la invitación: también se le quita el acceso a la mascota
+      await sb.from('pet_access').delete().eq('pet_id', petId).neq('user_id', state.user.id);
+    }
   }
+  pet.tutor2 = null; render();
+  showToast('Segundo tutor eliminado', 'success');
 }
 
 // ---- VISTA ADMINISTRADOR ----
@@ -4517,6 +4882,14 @@ async function initApp() {
       state.currentView = 'dashboard';
     }
     await loadDataFromSupabase();
+  }
+
+  // Invitación de segundo tutor pendiente (llegó por ?invite=TOKEN, ver loadState())
+  if (session && state.inviteToken) {
+    const token = state.inviteToken;
+    state.inviteToken = null;
+    await acceptPetInvite(token);
+    state.currentView = 'dashboard';
   }
 
   // Listen for auth changes

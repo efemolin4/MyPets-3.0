@@ -233,6 +233,74 @@ ALTER TABLE public.dewormings
 `periodicity` es `numeric` (no `integer`) para soportar la opción
 "1 1/2 meses" (valor `1.5`).
 
+### Corrección de deuda técnica (2026-08-28)
+
+Se corrigieron varios bugs donde partes de la app parecían funcionar en
+el modo demo pero no persistían datos reales en Supabase. La causa de
+fondo, descubierta inspeccionando el esquema real de producción, es que
+buena parte del código usaba nombres de tabla/columna que **no
+coinciden con el proyecto real**:
+
+| Código asumía | Tabla/columna real |
+|---|---|
+| `clinical_history` | `history_records` (y `doctor`→`vet`, `files` es `text[]`) |
+| `mood_log` | `mood_logs` |
+| `symptoms_log` | `symptoms_logs` |
+| `dose_log` (`medication_id`, `given`) | `dose_logs` (`med_id`, `confirmed`) |
+| `botiquin` (`category`, `status`) | `botiquin_items` (`type`, sin `status`) |
+| `meals` (`time`, `food`, `portion`, `portion_unit`) | `time_of_day`, `type`, `amount`, `unit` |
+| `medications.frequency` / `stock_total` / `expiry` | no existe `frequency`; es `stock_qty` / `expiry_date` |
+| tabla nueva `pet_invites` | ya existía como `invitations` |
+
+Todo esto ya está corregido en `js/app.js`. Lo único que falta son 6
+columnas nuevas en `pets` (nunca existieron) y dos políticas RLS para
+que la invitación de segundo tutor funcione de punta a punta. Ejecuta
+esto una sola vez en el SQL Editor de Supabase:
+
+```sql
+-- MASCOTAS: campos del wizard que nunca se guardaban (peso, talla,
+-- alergias, condiciones crónicas) — las únicas columnas realmente nuevas
+ALTER TABLE public.pets
+  ADD COLUMN IF NOT EXISTS weight_kg numeric,
+  ADD COLUMN IF NOT EXISTS weight_gr numeric,
+  ADD COLUMN IF NOT EXISTS size_range text,
+  ADD COLUMN IF NOT EXISTS activity_level integer,
+  ADD COLUMN IF NOT EXISTS allergies text[] DEFAULT '{}',
+  ADD COLUMN IF NOT EXISTS chronic_conditions text[] DEFAULT '{}';
+
+-- INVITACIONES: la política existente ("Inviters manage invitations")
+-- solo deja ver/editar filas a quien las creó. La persona invitada
+-- necesita poder ver su propia invitación por token y marcarla usada.
+CREATE POLICY "Invited user can view own invitation" ON public.invitations
+  FOR SELECT USING (invited_email = auth.email());
+CREATE POLICY "Invited user can accept own invitation" ON public.invitations
+  FOR UPDATE USING (invited_email = auth.email()) WITH CHECK (invited_email = auth.email());
+
+-- PET ACCESS: el dueño de la mascota necesita poder quitarle el acceso
+-- a un segundo tutor ya aceptado (la política existente solo permite
+-- a cada usuario tocar su propia fila).
+CREATE POLICY "Owner can remove pet access" ON public.pet_access
+  FOR DELETE USING (
+    EXISTS (SELECT 1 FROM public.pets p WHERE p.id = pet_access.pet_id AND p.owner_id = auth.uid())
+  );
+```
+
+**Notas:**
+- La política actual de `pet_access` (`Users see own access`, `ALL`
+  usando `user_id = auth.uid()`) ya es lo bastante amplia como para que
+  cualquier usuario autenticado pueda insertarse a sí mismo en
+  `pet_access` con cualquier `pet_id` — no hace falta una política
+  extra para que la invitación funcione, pero vale la pena que lo
+  tengas presente como consideración de seguridad aparte.
+- `invitations.used` (boolean) reemplaza a lo que iba a ser una columna
+  `status`; una invitación vence a los 7 días vía `expires_at`.
+- Si ya tenías medicamentos, comidas, síntomas, ánimo o historial
+  clínico guardados antes de esta corrección, es muy probable que esos
+  inserts hayan estado fallando silenciosamente contra Supabase (nombre
+  de tabla/columna incorrecto) — es decir, probablemente no haya datos
+  reales que migrar, salvo lo que hayas cargado manualmente en el
+  Table Editor.
+
 ---
 
 ## Deploy
