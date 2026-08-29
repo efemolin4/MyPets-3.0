@@ -287,6 +287,21 @@ function getAge(dob) {
   return `${y} año${y !== 1 ? 's' : ''}`;
 }
 
+// Convierte alertType/alertDays (guardados en vacunas/desparasitaciones pero antes
+// nunca usados) en un estado de 3 niveles: vencido / próximo / al día.
+function careAlertStatus(nextDate, alertType, alertDays) {
+  if (!nextDate) return { status: 'sin_fecha', label: '', color: 'text-gray-400', badge: 'bg-gray-100 text-gray-500' };
+  const todayStr = new Date().toISOString().slice(0, 10);
+  if (nextDate < todayStr) return { status: 'vencido', label: 'Vencido', color: 'text-red-500', badge: 'bg-red-100 text-red-600' };
+  const windowDays = alertType === 'week' ? 7 : alertType === 'custom' ? (parseInt(alertDays) || 0) : 0;
+  const thresholdStr = new Date(Date.now() + windowDays * 86400000).toISOString().slice(0, 10);
+  if (nextDate <= thresholdStr) {
+    const daysLeft = Math.round((new Date(nextDate + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 86400000);
+    return { status: 'proximo', label: daysLeft <= 0 ? 'Vence hoy' : `Vence en ${daysLeft} día${daysLeft !== 1 ? 's' : ''}`, color: 'text-amber-500', badge: 'bg-amber-100 text-amber-600' };
+  }
+  return { status: 'al_dia', label: 'Al día', color: 'text-green-600', badge: 'bg-green-100 text-green-700' };
+}
+
 function speciesEmoji(s) {
   return { Perro:'🐕', Gato:'🐈', Ave:'🦜', Conejo:'🐇', Pez:'🐠', Hámster:'🐹', Reptil:'🦎', Otro:'🐾' }[s] || '🐾';
 }
@@ -618,9 +633,14 @@ function viewDashboard() {
   const pets = state.pets;
   const today = new Date().toISOString().slice(0, 10);
   const alerts = pets.flatMap(p => [
-    ...( p.vaccines || []).filter(v => v.nextDate && v.nextDate <= today),
-    ...( p.medications || []).filter(m => m.endDate && m.endDate <= today),
+    ...(p.vaccines || []).filter(v => v.nextDate && careAlertStatus(v.nextDate, v.alertType, v.alertDays).status !== 'al_dia')
+      .map(v => ({ ...v, icon: '💉', status: careAlertStatus(v.nextDate, v.alertType, v.alertDays) })),
+    ...(p.deworming || []).filter(d => d.nextDate && careAlertStatus(d.nextDate, d.alertType, d.alertDays).status !== 'al_dia')
+      .map(d => ({ ...d, name: d.product, icon: '🪱', status: careAlertStatus(d.nextDate, d.alertType, d.alertDays) })),
+    ...(p.medications || []).filter(m => m.endDate && m.endDate <= today)
+      .map(m => ({ ...m, icon: '💊', status: { status: 'vencido', label: 'Tratamiento finalizado', badge: 'bg-red-100 text-red-600' } })),
   ]);
+  const overdueCount = alerts.filter(a => a.status.status === 'vencido').length;
   const upcoming = (state.events || []).filter(e => e.date >= today).slice(0, 3);
   const todayMeds = pets.flatMap(p => (p.medications || []).filter(m => m.active));
   const dateStr = new Date().toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
@@ -685,14 +705,15 @@ function viewDashboard() {
       </div>
 
       ${alerts.length > 0 ? `
-      <div class="md:col-span-2 bg-red-50 border border-red-100 rounded-2xl p-5">
-        <h2 class="font-semibold text-red-700 mb-3">⚠️ Alertas vencidas</h2>
+      <div class="md:col-span-2 ${overdueCount > 0 ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'} border rounded-2xl p-5">
+        <h2 class="font-semibold ${overdueCount > 0 ? 'text-red-700' : 'text-amber-700'} mb-3">⚠️ Alertas${overdueCount > 0 ? ` (${overdueCount} vencida${overdueCount!==1?'s':''})` : ''}</h2>
         <div class="space-y-2">
           ${alerts.slice(0,4).map(a => `
             <div class="flex items-center gap-3 bg-white rounded-xl p-3">
-              <span class="text-xl">💉</span>
-              <div><div class="text-sm font-medium text-gray-800">${a.name}</div>
+              <span class="text-xl">${a.icon}</span>
+              <div class="flex-1"><div class="text-sm font-medium text-gray-800">${a.name}</div>
               <div class="text-xs text-gray-400">Vence: ${formatDate(a.nextDate || a.endDate)}</div></div>
+              <span class="badge ${a.status.badge} text-xs flex-shrink-0">${a.status.label}</span>
             </div>`).join('')}
         </div>
       </div>` : ''}
@@ -1275,15 +1296,15 @@ function tabVaccines(pet) {
       ${total === 0
         ? emptyState('💉','Sin vacunas registradas','Agrega el historial de vacunación')
         : `<div class="space-y-3">
-             ${vs.map(v => `
+             ${vs.map(v => { const st = careAlertStatus(v.nextDate, v.alertType, v.alertDays); return `
                <div class="border border-gray-100 rounded-xl p-4 flex items-start justify-between">
                  <div class="flex items-start gap-3">
                    <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-lg">💉</div>
                    <div>
                      <div class="font-medium text-gray-900 text-sm">${v.name}</div>
                      <div class="text-xs text-gray-400">${v.code ? `Código: ${v.code} · ` : ''}Aplicada: ${formatDate(v.date)}</div>
-                     ${v.nextDate ? `<div class="text-xs mt-1 ${new Date(v.nextDate) < new Date() ? 'text-red-500' : 'text-green-600'}">Próxima: ${formatDate(v.nextDate)}</div>` : ''}
-                     ${v.alertType ? `<div class="text-xs text-brand-500">🔔 Alerta: ${{same:'El mismo día',week:'1 semana antes',custom:`${v.alertDays} días antes`}[v.alertType]||v.alertType}</div>` : ''}
+                     ${v.nextDate ? `<div class="text-xs mt-1 ${st.color}">Próxima: ${formatDate(v.nextDate)}${st.label ? ` · <span class="badge ${st.badge}">${st.label}</span>` : ''}</div>` : ''}
+                     ${v.alertType ? `<div class="text-xs text-brand-500">🔔 Alerta configurada: ${{same:'El mismo día',week:'1 semana antes',custom:`${v.alertDays} días antes`}[v.alertType]||v.alertType}</div>` : ''}
                      ${v.cost ? `<div class="text-xs text-gray-400">Costo: ${fmtCLP(v.cost)}</div>` : ''}
                    </div>
                  </div>
@@ -1297,7 +1318,7 @@ function tabVaccines(pet) {
                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                    </button>
                  </div>
-               </div>`).join('')}
+               </div>`; }).join('')}
            </div>
            ${pagerHTML(`vac_${pet.id}`, pages, page)}`}
     </div>`;
@@ -1318,7 +1339,7 @@ function tabDeworming(pet) {
       ${total === 0
         ? emptyState('🪱','Sin desparasitaciones','Registra los tratamientos antiparasitarios')
         : `<div class="space-y-2">
-             ${ds.map(d => `
+             ${ds.map(d => { const st = careAlertStatus(d.nextDate, d.alertType, d.alertDays); return `
                <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 hover:bg-teal-50/30 transition-colors group">
                  <div class="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center text-base flex-shrink-0">🪱</div>
                  <div class="flex-1 min-w-0">
@@ -1327,7 +1348,7 @@ function tabDeworming(pet) {
                      <span class="badge bg-teal-50 text-teal-700 text-xs">${d.type}</span>
                    </div>
                    <div class="text-xs text-gray-400">${d.format} · Dosis: ${d.dose} ${d.unit} · ${formatDate(d.date)}</div>
-                   ${d.nextDate ? `<div class="text-xs ${new Date(d.nextDate)<new Date()?'text-red-500':'text-teal-600'} font-medium">Próxima: ${formatDate(d.nextDate)}</div>` : ''}
+                   ${d.nextDate ? `<div class="text-xs ${st.color} font-medium">Próxima: ${formatDate(d.nextDate)}${st.label ? ` · <span class="badge ${st.badge}">${st.label}</span>` : ''}</div>` : ''}
                  </div>
                  <div class="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
                    <button onclick="openEditDewormModal('${pet.id}','${d.id}')" title="Editar"
@@ -1339,7 +1360,7 @@ function tabDeworming(pet) {
                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                    </button>
                  </div>
-               </div>`).join('')}
+               </div>`; }).join('')}
            </div>
            ${pagerHTML(`dew_${pet.id}`, pages, page)}`}
     </div>`;
@@ -1393,17 +1414,16 @@ function tabMedications(pet) {
                          ${m.startTime ? ` · ⏰ ${m.startTime}` : ''}
                        </div>
                        ${m.reminder ? `<div class="text-xs text-brand-500 mt-0.5">🔔 ${reminderLabel}</div>` : ''}
-                       ${m.stockTotal ? `
+                       ${(() => { const ms = medStockStatus(m); if (!ms) return ''; const barColor = { critico:'bg-red-400', bajo:'bg-amber-400', ok:'bg-green-400' }[ms.level]; return `
                          <div class="mt-2">
                            <div class="flex justify-between text-xs text-gray-500 mb-1">
-                             <span>Stock: ${m.stockTotal} ${m.stockUnit||''}</span>
+                             <span>Stock: ${m.stockTotal} ${m.stockUnit||''} · ${ms.label}</span>
                              ${m.expiry ? `<span class="${isExpired?'text-red-500':expiringSoon?'text-amber-500':'text-gray-400'}">Cad: ${formatDate(m.expiry)}</span>` : ''}
                            </div>
                            <div class="w-full bg-gray-100 rounded-full h-1.5">
-                             <div class="h-1.5 rounded-full ${parseInt(m.stockTotal)<=5?'bg-red-400':parseInt(m.stockTotal)<=15?'bg-amber-400':'bg-green-400'}"
-                               style="width:${Math.min(100,parseInt(m.stockTotal)/30*100)}%"></div>
+                             <div class="h-1.5 rounded-full ${barColor}" style="width:${ms.pct}%"></div>
                            </div>
-                         </div>` : ''}
+                         </div>`; })()}
                      </div>
                    </div>
                    <div class="flex items-center gap-1 flex-shrink-0">
@@ -1808,8 +1828,16 @@ function viewFinance() {
       const now = new Date();
       const last90Days = new Date(now.getTime() - 90 * 86400000).toISOString().slice(0,10);
       const last90Expenses = allExpenses.filter(e => e.date >= last90Days);
-      const last90Total = last90Expenses.reduce((s,e) => s + Number(e.amount||0), 0);
-      const avgMonthly = Math.round(last90Total / 3);
+      const last90Amounts = last90Expenses.map(e => Number(e.amount || 0)).filter(a => a > 0);
+      if (!last90Amounts.length) return '';
+      // Un gasto puntual grande (cirugía, emergencia) no debería inflar la proyección
+      // "normal" de gasto mensual: se topa cada gasto a 4x la mediana antes de promediar.
+      const sortedAmounts = [...last90Amounts].sort((a, b) => a - b);
+      const medianAmount = sortedAmounts[Math.floor(sortedAmounts.length / 2)];
+      const cap = medianAmount * 4;
+      const hadOutliers = last90Amounts.some(a => a > cap);
+      const cappedTotal = last90Amounts.reduce((s, a) => s + Math.min(a, cap), 0);
+      const avgMonthly = Math.round(cappedTotal / 3);
       if (avgMonthly === 0) return '';
 
       // Compare last month vs prev month (maneja el cruce de año con Date en vez de aritmética de string)
@@ -1825,7 +1853,7 @@ function viewFinance() {
       return `
       <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5 mt-4">
         <h3 class="font-semibold text-gray-800 mb-1">📊 Predicción de gastos</h3>
-        <p class="text-xs text-gray-400 mb-3">Basado en el promedio de los últimos 3 meses</p>
+        <p class="text-xs text-gray-400 mb-3">Basado en los últimos 3 meses${hadOutliers ? ' · excluye el efecto de gastos puntuales grandes' : ''}</p>
         <div class="flex items-center gap-4 flex-wrap">
           <div>
             <div class="text-2xl font-bold text-gray-900">~${fmtCLP(avgMonthly)}</div>
@@ -3128,13 +3156,42 @@ function botiquinStatus(item) {
   return 'disponible';
 }
 
+// Stock de un medicamento en tratamiento: si se puede inferir el consumo diario
+// (frecuencia + dosis, en la misma unidad que el stock), calcula días restantes
+// reales en vez de un umbral fijo de unidades ("5 comprimidos" no significa lo
+// mismo para un tratamiento diario que para uno semanal).
+function medStockDaysRemaining(m) {
+  const stock = parseFloat(m.stockTotal);
+  const freqN = parseFloat(m.freqN);
+  if (!stock || stock <= 0 || !freqN) return null;
+  const dosesPerDay = m.freqUnit === 'dias' ? 1 / freqN : 24 / freqN;
+  const doseVal = parseFloat(m.doseVal) || 1;
+  const sameUnit = (m.doseUnit || '').toLowerCase().replace(/\(s\)$/, '') === (m.stockUnit || '').toLowerCase().replace(/s$/, '');
+  const consumptionPerDay = dosesPerDay * (sameUnit ? doseVal : 1);
+  if (!consumptionPerDay) return null;
+  return Math.floor(stock / consumptionPerDay);
+}
+
+function medStockStatus(m) {
+  const stock = parseInt(m.stockTotal);
+  if (!stock) return null;
+  const days = medStockDaysRemaining(m);
+  if (days == null) {
+    // Sin datos suficientes para estimar consumo: umbral por unidades, como antes
+    const level = stock <= 5 ? 'critico' : stock <= 15 ? 'bajo' : 'ok';
+    return { level, label: `${stock} ${m.stockUnit || ''}`.trim(), pct: Math.min(100, stock / 30 * 100) };
+  }
+  const level = days <= 3 ? 'critico' : days <= 10 ? 'bajo' : 'ok';
+  return { level, label: `~${days} día${days !== 1 ? 's' : ''} de stock`, pct: Math.min(100, days / 30 * 100), days };
+}
+
 function viewBotiquin() {
   const pets = state.pets;
   const allMeds = pets.flatMap(p => (p.medications||[]).map(m => ({ ...m, petName: p.name, petId: p.id })));
   const today = new Date().toISOString().slice(0,10);
   const active = allMeds.filter(m => m.active);
   const expiringSoon = allMeds.filter(m => m.expiry && m.expiry <= new Date(Date.now()+30*86400000).toISOString().slice(0,10));
-  const lowStock = allMeds.filter(m => m.stockTotal && parseInt(m.stockTotal) <= 5);
+  const lowStock = allMeds.filter(m => { const ms = medStockStatus(m); return ms && ms.level !== 'ok'; });
   const filterPet = state.botiquinFilter || '';
   const filterStatus = state.botiquinStatus || '';
   let displayed = allMeds.filter(m => !filterPet || m.petName === filterPet);
