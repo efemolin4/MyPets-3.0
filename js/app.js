@@ -534,6 +534,20 @@ function emptyState(icon, title, sub, btnLabel = '', btnFn = '') {
   </div>`;
 }
 
+// Pantalla completa que reemplaza a Finanzas/Agenda/Botiquín cuando no hay
+// mascotas registradas — antes mostraban tarjetas de estadísticas en 0 y
+// filtros vacíos que aparentaban funcionar sin tener sobre qué operar.
+function noPetsOnboarding(icon, title, desc) {
+  return appShell(`
+    <div class="max-w-lg mx-auto text-center py-10 md:py-16 animate-fade-in">
+      <div class="text-5xl md:text-6xl mb-4">${icon}</div>
+      <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-2">${title}</h2>
+      <p class="text-sm text-gray-500 mb-6">${desc}</p>
+      <button onclick="navigate('addPet')" class="btn-primary px-6 py-3 text-base">+ Registrar mi primera mascota</button>
+    </div>
+  `);
+}
+
 // ---- VISTA: LOGIN ----
 function viewLogin() {
   return `
@@ -705,6 +719,40 @@ function viewForgot() {
 function viewDashboard() {
   const pets = state.pets;
   const today = todayStr();
+  const dateStr0 = new Date().toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+
+  if (pets.length === 0) {
+    return appShell(`
+      <div class="mb-5">
+        <h1 class="text-xl md:text-2xl font-bold text-gray-900">Hola, ${state.user?.name?.split(' ')[0] || 'Tutor'} 👋</h1>
+        <p class="text-sm text-gray-400 mt-0.5 capitalize">${dateStr0}</p>
+      </div>
+      <div class="bg-white rounded-2xl shadow-sm p-6 md:p-10 text-center max-w-2xl mx-auto mt-4 md:mt-8">
+        <div class="text-5xl mb-4">🐾</div>
+        <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-2">Empecemos con tu primera mascota</h2>
+        <p class="text-sm text-gray-500 mb-8 max-w-md mx-auto">Regístrala para llevar su ficha de salud, agenda y gastos en un solo lugar. Solo toma un par de minutos.</p>
+        <div class="grid sm:grid-cols-3 gap-3 mb-8 text-left">
+          <div class="bg-brand-50 border border-brand-100 rounded-xl p-4">
+            <div class="w-7 h-7 rounded-full bg-brand-500 text-white flex items-center justify-center font-bold text-xs mb-2">1</div>
+            <div class="text-sm font-semibold text-gray-800">Registra tu mascota</div>
+            <div class="text-xs text-gray-500 mt-1">Nombre, especie y datos básicos</div>
+          </div>
+          <div class="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div class="w-7 h-7 rounded-full bg-gray-300 text-white flex items-center justify-center font-bold text-xs mb-2">2</div>
+            <div class="text-sm font-semibold text-gray-800">Añade su primer evento</div>
+            <div class="text-xs text-gray-500 mt-1">Una vacuna, control o consulta</div>
+          </div>
+          <div class="bg-gray-50 border border-gray-100 rounded-xl p-4">
+            <div class="w-7 h-7 rounded-full bg-gray-300 text-white flex items-center justify-center font-bold text-xs mb-2">3</div>
+            <div class="text-sm font-semibold text-gray-800">Configura recordatorios</div>
+            <div class="text-xs text-gray-500 mt-1">Nunca más te olvides de una dosis</div>
+          </div>
+        </div>
+        <button onclick="navigate('addPet')" class="btn-primary px-6 py-3 text-base">+ Registrar mi primera mascota</button>
+      </div>
+    `);
+  }
+
   const alerts = pets.flatMap(p => [
     ...(p.vaccines || []).filter(v => v.nextDate && careAlertStatus(v.nextDate, v.alertType, v.alertDays).status !== 'al_dia')
       .map(v => ({ ...v, icon: '💉', status: careAlertStatus(v.nextDate, v.alertType, v.alertDays) })),
@@ -800,9 +848,9 @@ function viewDashboard() {
         const doseLog = p.doseLog || [];
         // Count consecutive days backwards from today
         let streak = 0;
-        let checkDate = new Date();
+        let checkDate = new Date(today + 'T12:00:00');
         for (let i = 0; i < 365; i++) {
-          const dateStr = checkDate.toISOString().slice(0,10);
+          const dateStr = `${checkDate.getFullYear()}-${String(checkDate.getMonth() + 1).padStart(2, '0')}-${String(checkDate.getDate()).padStart(2, '0')}`;
           if (doseLog.some(dl => dl.date === dateStr && dl.given)) {
             streak++;
             checkDate.setDate(checkDate.getDate()-1);
@@ -906,7 +954,7 @@ function viewPets() {
     ${pageHeader('Mis Mascotas', `${pets.length} mascota${pets.length !== 1 ? 's' : ''} registrada${pets.length !== 1 ? 's' : ''}`,
       `<button onclick="navigate('addPet')" class="btn-primary flex items-center gap-1.5">
          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-         <span>Agregar</span>
+         <span>Agregar mascota</span>
        </button>`)}
     ${pets.length === 0
       ? emptyState('🐾', 'Aún no tienes mascotas', 'Registra tu primera mascota para comenzar', '+ Agregar mascota', "navigate('addPet')")
@@ -954,11 +1002,11 @@ function viewPets() {
 // ---- VISTA: AGREGAR MASCOTA (STEPPER) ----
 function viewAddPet() {
   const step = state.addPetStep;
-  const steps = ['Datos básicos', 'Info física', 'Salud', 'Tutores'];
+  const steps = ['Identificación', 'Características', 'Salud', 'Tutores'];
   return appShell(`
     <div class="max-w-2xl mx-auto">
       <div class="flex items-center gap-3 mb-6">
-        <button onclick="navigate('pets')" class="w-9 h-9 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:bg-gray-50">‹</button>
+        <button onclick="cancelAddPet()" class="flex items-center gap-1 h-9 px-3 rounded-xl border border-gray-200 text-sm font-medium text-gray-500 hover:bg-gray-50 hover:text-gray-700 transition-colors">‹ Cancelar</button>
         <div>
           <h1 class="text-xl font-bold text-gray-900">Nueva mascota</h1>
           <p class="text-sm text-gray-400">Paso ${step} de 4</p>
@@ -992,7 +1040,7 @@ function viewAddPet() {
 function stepBasic() {
   const d = state.newPetData;
   return `
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Datos básicos</h2>
+    <h2 class="text-lg font-bold text-gray-900 mb-4">Identificación</h2>
     <div class="space-y-4">
       <div class="flex flex-col items-center mb-4">
         <div id="photo-preview" class="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center text-4xl mb-2 overflow-hidden">
@@ -1005,7 +1053,8 @@ function stepBasic() {
       <div class="space-y-3">
         <div>
           <label class="form-label">Nombre *</label>
-          <input id="pet-name" type="text" required value="${d.name||''}" placeholder="Nombre de tu mascota" class="input-field" />
+          <input id="pet-name" type="text" required value="${d.name||''}" placeholder="Nombre de tu mascota" class="input-field" oninput="clearFieldError('pet-name')" />
+          <p id="pet-name-error" class="text-xs text-red-500 mt-1 hidden">Ingresa el nombre de tu mascota para continuar</p>
         </div>
         <!-- Especie + Sexo siempre en 2 col (selects cortos) -->
         <div class="grid grid-cols-2 gap-3">
@@ -1016,7 +1065,7 @@ function stepBasic() {
             </select>
           </div>
           <div>
-            <label class="form-label">Sexo</label>
+            <label class="form-label">Sexo <span class="text-gray-400 font-normal">(opcional)</span></label>
             <select id="pet-sex" class="input-field">
               ${['Macho','Hembra'].map(s => `<option ${d.sex===s?'selected':''}>${s}</option>`).join('')}
             </select>
@@ -1025,14 +1074,15 @@ function stepBasic() {
         <!-- Raza + Fecha: 1 col en mobile, 2 col en sm+ -->
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label class="form-label">Raza</label>
+            <label class="form-label">Raza <span class="text-gray-400 font-normal">(opcional)</span></label>
             <select id="pet-breed" class="input-field">
               ${(BREEDS[d.species || 'Perro'] || BREEDS.Otro).map(b => `<option ${(d.breed||'Mestizo')===b?'selected':''}>${b}</option>`).join('')}
             </select>
           </div>
           <div>
-            <label class="form-label">Fecha de nacimiento</label>
+            <label class="form-label">Fecha de nacimiento <span class="text-gray-400 font-normal">(opcional)</span></label>
             <input id="pet-dob" type="date" value="${d.dateOfBirth||''}" class="input-field" />
+            <p class="text-xs text-gray-400 mt-1">Si no la sabes con exactitud, deja el campo vacío</p>
           </div>
         </div>
       </div>
@@ -1050,7 +1100,7 @@ function stepPhysical() {
     { label: 'Gigante', range: 'más de 45 kg' },
   ];
   return `
-    <h2 class="text-lg font-bold text-gray-900 mb-4">Información física</h2>
+    <h2 class="text-lg font-bold text-gray-900 mb-4">Características físicas</h2>
     <div class="space-y-3">
       <!-- Color + Tamaño: 2 col (selects cortos, OK en mobile) -->
       <div class="grid grid-cols-2 gap-3">
@@ -1579,13 +1629,16 @@ function tabHistory(pet) {
 
 // ---- VISTA: CALENDARIO ----
 function viewCalendar() {
+  if (state.pets.length === 0) {
+    return noPetsOnboarding('📅', 'Tu agenda está esperando', 'Registra una mascota primero para poder agendar vacunas, controles y otros eventos.');
+  }
   const now = new Date();
   const year = state.calYear || now.getFullYear();
   const month = state.calMonth !== undefined ? state.calMonth : now.getMonth();
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const startDow = firstDay.getDay();
-  const today = now.toISOString().slice(0,10);
+  const today = todayStr();
   const events = state.events || [];
   const monthName = firstDay.toLocaleDateString('es-CL', { month:'long', year:'numeric' });
   const days = [];
@@ -1596,7 +1649,7 @@ function viewCalendar() {
     ${pageHeader('Agenda', monthName,
       `<button onclick="openEventModal()" class="btn-primary flex items-center gap-1.5">
          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-         <span>Evento</span>
+         <span>Crear evento</span>
        </button>`)}
 
     <div class="bg-white rounded-2xl shadow-sm p-3 md:p-4 mb-6">
@@ -1614,14 +1667,16 @@ function viewCalendar() {
           const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const dayEvents = events.filter(e => e.date === dateStr);
           const isToday = dateStr === today;
+          const fullDate = new Date(dateStr + 'T12:00:00').toLocaleDateString('es-CL', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
+          const ariaLabel = `${fullDate}${isToday ? ' · hoy' : ''}${dayEvents.length ? ` · ${dayEvents.length} evento${dayEvents.length!==1?'s':''}` : ' · sin eventos'}`;
           return `
-            <div onclick="openEventModal('${dateStr}')" class="calendar-day ${isToday?'today':''} relative">
+            <button type="button" onclick="openEventModal('${dateStr}')" class="calendar-day ${isToday?'today':''} relative w-full text-left" aria-label="${ariaLabel}" aria-current="${isToday ? 'date' : 'false'}">
               <div class="text-[10px] md:text-xs font-semibold ${isToday?'text-brand-600':'text-gray-700'}">${d}</div>
               ${dayEvents.slice(0,2).map(e => `
                 <div class="hidden md:block text-xs mt-0.5 px-1 py-0.5 rounded bg-brand-100 text-brand-700 truncate">${eventIcon(e.type)} ${e.title}</div>
                 <div class="md:hidden mt-0.5 w-1.5 h-1.5 rounded-full bg-brand-400 mx-auto"></div>
               `).join('')}
-            </div>`;
+            </button>`;
         }).join('')}
       </div>
     </div>
@@ -1661,6 +1716,9 @@ function viewCalendar() {
 
 // ---- VISTA: FINANZAS ----
 function viewFinance() {
+  if (state.pets.length === 0) {
+    return noPetsOnboarding('💰', 'Aún no hay gastos que mostrar', 'Registra una mascota primero para empezar a llevar el control de sus gastos veterinarios, alimentación y más.');
+  }
   const allExpenses = state.expenses || [];
   const pets = state.pets;
   const today = new Date();
@@ -1757,7 +1815,7 @@ function viewFinance() {
     ${pageHeader('Finanzas 💰', 'Control de gastos por mascota',
       `<button onclick="openExpenseModal()" class="btn-primary flex items-center gap-1.5">
          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-         <span>Gasto</span>
+         <span>Registrar gasto</span>
        </button>`)}
 
     <!-- Filtros -->
@@ -2516,9 +2574,32 @@ async function logout() {
 function openPet(id) { navigate('petProfile', { currentPetId: id, currentTab: 'general' }); }
 function setTab(t) { state.currentTab = t; render(); }
 
+function cancelAddPet() {
+  collectStepData();
+  const hasProgress = Object.values(state.newPetData || {}).some(v => Array.isArray(v) ? v.length : v);
+  if (hasProgress && !confirm('¿Salir sin guardar? Se perderá el progreso de esta mascota.')) return;
+  state.newPetData = {}; state.addPetStep = 1;
+  navigate('pets');
+}
+
 function prevStep() { if (state.addPetStep > 1) { collectStepData(); state.addPetStep--; render(); } }
+function showFieldError(fieldId, errorId) {
+  document.getElementById(fieldId)?.classList.add('border-red-400');
+  document.getElementById(errorId)?.classList.remove('hidden');
+  document.getElementById(fieldId)?.focus();
+}
+
+function clearFieldError(fieldId) {
+  document.getElementById(fieldId)?.classList.remove('border-red-400');
+  document.getElementById(fieldId + '-error')?.classList.add('hidden');
+}
+
 function nextStep() {
   collectStepData();
+  if (state.addPetStep === 1 && !state.newPetData.name?.trim()) {
+    showFieldError('pet-name', 'pet-name-error');
+    return;
+  }
   if (state.addPetStep === 4) { savePet(); return; }
   state.addPetStep++; render();
 }
@@ -3335,12 +3416,13 @@ function viewBotiquin() {
            </div>`}
     </div>
 
+    ${pets.length > 0 ? `
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
       ${statCard('💊','Total', allMeds.length, 'brand')}
       ${statCard('✅','Activos', active.length, 'teal')}
       ${statCard('⚠️','Stock bajo', lowStock.length, 'amber')}
       ${statCard('📅','Por vencer (30d)', expiringSoon.length, 'red')}
-    </div>
+    </div>` : ''}
 
     ${expiringSoon.length > 0 ? `
     <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-6">
@@ -3359,6 +3441,10 @@ function viewBotiquin() {
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
         <h3 class="font-semibold text-gray-700">Tratamientos activos por mascota</h3>
         <div class="flex items-center gap-2 flex-wrap">
+          ${pets.length === 0 ? `
+          <select disabled title="Registra una mascota para filtrar" class="input-field text-sm py-1.5 w-auto text-gray-400 bg-gray-50 cursor-not-allowed">
+            <option>Registra una mascota para filtrar</option>
+          </select>` : `
           <select onchange="state.botiquinFilter=this.value;render()" class="input-field text-sm py-1.5 w-auto">
             <option value="">Todas las mascotas</option>
             ${pets.map(p => `<option ${filterPet===p.name?'selected':''}>${p.name}</option>`).join('')}
@@ -3368,12 +3454,13 @@ function viewBotiquin() {
             <option value="active" ${filterStatus==='active'?'selected':''}>Activos</option>
             <option value="finished" ${filterStatus==='finished'?'selected':''}>Finalizados</option>
             <option value="expired" ${filterStatus==='expired'?'selected':''}>Vencidos</option>
-          </select>
+          </select>`}
         </div>
       </div>
 
       ${(() => {
         const { items: dispPage, total: dispTotal, pages: dispPages, page: dispPage_ } = paginate(displayed, 'botiquin');
+        if (pets.length === 0) return emptyState('🐾','Sin mascotas registradas','Registra tu primera mascota para empezar a llevar sus tratamientos','+ Registrar mascota',"navigate('addPet')");
         return dispTotal === 0
           ? emptyState('💊','Sin medicamentos','Agrega tratamientos desde el perfil de cada mascota')
           : `<div class="divide-y divide-gray-50">
