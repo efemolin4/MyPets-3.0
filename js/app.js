@@ -409,18 +409,73 @@ function iconSVG(name) {
     kit:     `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"/>`,
     logout:  `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>`,
     admin:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>`,
+    check:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>`,
+    checkCircle:`<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>`,
+    x:          `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>`,
+    warning:    `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z"/>`,
+    bell:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>`,
+    pencil:     `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/>`,
+    trash:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/>`,
+    paperclip:  `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"/>`,
+    plus:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/>`,
+    money:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>`,
+    creditCard: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-9 4h16a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>`,
+    clipboard:  `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4"/>`,
+    users:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a4 4 0 00-3-3.87M9 20H4v-2a4 4 0 013-3.87m6-1.13a4 4 0 10-4-4 4 4 0 004 4zm5 0a4 4 0 10-1.5-7.7"/>`,
+    mail:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>`,
+    phone:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>`,
+    chartBar:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/>`,
+    pin:        `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a2 2 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"/>`,
+    box:        `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"/>`,
+    bolt:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>`,
+    fire:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 18.657A8 8 0 016.343 7.343S7 9 9 10c0-2 .5-5 2.986-7C14 5 16.09 5.777 17.657 7.343A7.975 7.975 0 0120 13a7.975 7.975 0 01-2.343 5.657z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.879 16.121A3 3 0 1012.015 11L11 14H9c0 .768.293 1.536.879 2.121z"/>`,
+    arrowUp:    `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 15l7-7 7 7"/>`,
+    arrowDown:  `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>`,
+    arrowRight: `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>`,
+    arrowLeft:  `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16l-4-4m0 0l4-4m-4 4h18"/>`,
+    minus:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/>`,
+    lock:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/>`,
+    key:        `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>`,
+    flask:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 3.104v5.714a2.25 2.25 0 01-.659 1.591L5.106 14.4a2.25 2.25 0 00-.659 1.591v.001c0 1.242 1.007 2.25 2.25 2.25h10.606c1.243 0 2.25-1.008 2.25-2.25 0-.597-.237-1.169-.659-1.591l-3.985-3.991a2.25 2.25 0 01-.659-1.591V3.104M9.75 3.104a24.301 24.301 0 014.5 0"/>`,
+    bug:        `<circle cx="12" cy="13" r="4" stroke-width="2"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9V6m0 0L9.5 4M12 6l2.5-2M8 12H5m11 1h3M9 16l-2 2m8-2l2 2M12 5.5v0"/>`,
+    pill:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 15.5L15.5 7a4.243 4.243 0 116 6L13 21.5a4.243 4.243 0 01-6-6z"/><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.5 11.5l3 3"/>`,
+    weight:     `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v2m0 0a4 4 0 014 4H8a4 4 0 014-4zM5 9h14l1.4 8.4A2 2 0 0118.42 20H5.58a2 2 0 01-1.98-2.6L5 9z"/>`,
+    activity:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>`,
+    food:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12h18M3 12a9 9 0 0018 0M3 12a9 9 0 0118-0M8 6v2m4-2v2m4-2v2"/>`,
+    heart:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/>`,
+    cake:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 2v4m0 0c-.5 0-1 .5-1 1s.5 1 1 1 1-.5 1-1-.5-1-1-1zM4 21v-7a2 2 0 012-2h12a2 2 0 012 2v7M4 21h16M4 21a2 2 0 002-2m14 2a2 2 0 01-2-2M4 15h16M9 12v3m6-3v3"/>`,
+    face:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 15s1 1.5 3 1.5S15 15 15 15M9 9h.01M15 9h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>`,
+    idea:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 18h6m-5 3h4m-7-9a6 6 0 1112 0c0 2.223-1.25 3.5-2.25 4.5S13 15 12 15s-1.75-.5-2.75-1.5S7 12.223 7 10z"/>`,
+    hospital:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V7a2 2 0 00-2-2H7a2 2 0 00-2 2v14m14 0H5m14 0h2M5 21H3m8-14v4m-2-2h4M9 21v-4a1 1 0 011-1h4a1 1 0 011 1v4"/>`,
+    scissors:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 9a3 3 0 100-6 3 3 0 000 6zm0 0v0a3 3 0 013 3v0m-3-3l12 8m0-14L9 12m9 6a3 3 0 11-6 0 3 3 0 016 0z"/>`,
+    building:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 21h18M5 21V7l7-4 7 4v14M9 9h.01M9 13h.01M15 9h.01M15 13h.01M10 21v-4a2 2 0 014 0v4"/>`,
+    menu:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/>`,
+    receipt:    `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 14l2 2 4-4m3 9l-1.5-1.5L15 21l-1.5-1.5L12 21l-1.5-1.5L9 21l-1.5-1.5L6 21V5a2 2 0 012-2h8a2 2 0 012 2v16z"/>`,
+    folder:     `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"/>`,
+    clock:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>`,
+    document:   `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>`,
+    printer:    `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m10 0v4a1 1 0 01-1 1H8a1 1 0 01-1-1v-4m10 0H7m10-9V4a1 1 0 00-1-1H8a1 1 0 00-1 1v4h10z"/>`,
+    party:      `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5.25 5.25l1.5 1.5m10.5-1.5l-1.5 1.5M3 12h2.25m13.5 0H21M8 21l8-15 5 15-8-4-5 4z"/>`,
+    wave:       `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6.633 10.5c.806 0 1.533-.446 2.031-1.08a9.041 9.041 0 012.861-2.4c.723-.384 1.35-.956 1.653-1.715a4.498 4.498 0 00.322-1.672V3a.75.75 0 01.75-.75A2.25 2.25 0 0116.5 4.5c0 1.152-.26 2.243-.723 3.218-.266.558.107 1.282.725 1.282h3.126c1.026 0 1.945.694 2.054 1.715.045.422.068.85.068 1.285a11.95 11.95 0 01-2.649 7.521c-.388.482-.987.729-1.605.729H13.48c-.483 0-.964-.078-1.423-.23l-3.114-1.04a4.501 4.501 0 00-1.423-.23H5.904"/>`,
+    dog:        `<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8c0-1.5 1-3 3-3l2 3M20 8c0-1.5-1-3-3-3l-2 3M6 8c0 4 2.5 7 6 7s6-3 6-7M6 8H5a1 1 0 000 2h1m12-2h1a1 1 0 010 2h-1M10 15v2m4-2v2m-5 2h6"/>`,
   };
   return icons[name] || '';
 }
 
+// Envuelve un ícono lineal (svg) con tamaño/color consistentes — reemplaza el
+// uso disperso de emojis como iconografía funcional en toda la app.
+function icon(name, cls = 'w-5 h-5') {
+  return `<svg class="${cls}" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSVG(name)}</svg>`;
+}
+
 function sidebar() {
   const items = [
-    { v:'dashboard', icon:'🏠', label:'Inicio' },
-    { v:'pets',      icon:'🐾', label:'Mis Mascotas' },
-    { v:'calendar',  icon:'📅', label:'Agenda' },
-    { v:'finance',   icon:'💰', label:'Finanzas' },
-    { v:'botiquin',  icon:'🧴', label:'Botiquín' },
-    ...(state.user?.isAdmin ? [{ v:'admin', icon:'⚙️', label:'Admin' }] : []),
+    { v:'dashboard', label:'Inicio' },
+    { v:'pets',      label:'Mis Mascotas' },
+    { v:'calendar',  label:'Agenda' },
+    { v:'finance',   label:'Finanzas' },
+    { v:'botiquin',  label:'Botiquín' },
+    ...(state.user?.isAdmin ? [{ v:'admin', label:'Admin' }] : []),
   ];
   const navIcons = { dashboard:'home', pets:'paw', calendar:'calendar', finance:'finance', botiquin:'kit', admin:'admin' };
   return `
@@ -433,13 +488,12 @@ function sidebar() {
       ${items.map(i => {
         const active = state.currentView === i.v;
         return `
-        <button onclick="navigate('${i.v}')"
-          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group ${active ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}">
+        <button onclick="navigate('${i.v}')" aria-current="${active?'page':'false'}"
+          class="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all group focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand-400 focus-visible:ring-offset-1 ${active ? 'bg-brand-50 text-brand-700 font-semibold' : 'text-gray-500 hover:bg-gray-50 hover:text-gray-800'}">
           <svg class="w-4.5 h-4.5 flex-shrink-0 ${active?'text-brand-600':'text-gray-400 group-hover:text-gray-600'}" style="width:1.1rem;height:1.1rem" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             ${iconSVG(navIcons[i.v]||'home')}
           </svg>
           <span>${i.label}</span>
-          ${active?`<span class="ml-auto w-1.5 h-4 rounded-full bg-brand-500"></span>`:''}
         </button>`;
       }).join('')}
     </nav>
@@ -448,7 +502,7 @@ function sidebar() {
         <div class="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center text-white text-xs font-bold flex-shrink-0">${(state.user?.name||'U')[0].toUpperCase()}</div>
         <div class="flex-1 min-w-0">
           <div class="text-xs font-semibold text-gray-900 truncate">${state.user?.name||''}</div>
-          <div class="text-xs text-gray-400 truncate">${state.user?.email||''}</div>
+          <div class="text-xs text-gray-400 truncate" title="${state.user?.email||''}">${state.user?.email||''}</div>
         </div>
         <button onclick="logout()" title="Cerrar sesión"
           class="w-7 h-7 rounded-lg flex items-center justify-center text-gray-400 hover:text-red-500 hover:bg-red-50 transition-colors flex-shrink-0">
@@ -524,10 +578,10 @@ function petAvatar(pet, size = 'sm') {
   return `<div class="${dim} pet-avatar-placeholder rounded-full">${speciesEmoji(pet.species)}</div>`;
 }
 
-function emptyState(icon, title, sub, btnLabel = '', btnFn = '') {
+function emptyState(iconName, title, sub, btnLabel = '', btnFn = '') {
   return `
-  <div class="text-center py-10 md:py-16 animate-fade-in">
-    <div class="text-5xl md:text-6xl mb-3">${icon}</div>
+  <div class="text-center py-8 md:py-10 animate-fade-in">
+    <div class="mb-3 flex justify-center text-gray-300">${icon(iconName, 'w-12 h-12 md:w-14 md:h-14')}</div>
     <h3 class="text-base md:text-lg font-semibold text-gray-700 mb-1">${title}</h3>
     <p class="text-sm text-gray-400 mb-5">${sub}</p>
     ${btnLabel ? `<button onclick="${btnFn}" class="btn-primary">${btnLabel}</button>` : ''}
@@ -537,10 +591,10 @@ function emptyState(icon, title, sub, btnLabel = '', btnFn = '') {
 // Pantalla completa que reemplaza a Finanzas/Agenda/Botiquín cuando no hay
 // mascotas registradas — antes mostraban tarjetas de estadísticas en 0 y
 // filtros vacíos que aparentaban funcionar sin tener sobre qué operar.
-function noPetsOnboarding(icon, title, desc) {
+function noPetsOnboarding(iconName, title, desc) {
   return appShell(`
     <div class="max-w-lg mx-auto text-center py-10 md:py-16 animate-fade-in">
-      <div class="text-5xl md:text-6xl mb-4">${icon}</div>
+      <div class="mb-4 flex justify-center text-brand-300">${icon(iconName, 'w-14 h-14 md:w-16 md:h-16')}</div>
       <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-2">${title}</h2>
       <p class="text-sm text-gray-500 mb-6">${desc}</p>
       <button onclick="navigate('addPet')" class="btn-primary px-6 py-3 text-base">+ Registrar mi primera mascota</button>
@@ -557,14 +611,14 @@ function viewLogin() {
         ${Array.from({length:12}, (_,i) => `<div class="absolute text-6xl" style="top:${Math.random()*90}%;left:${Math.random()*90}%;opacity:${0.3+Math.random()*0.7}">${['🐕','🐈','🐇','🦜','🐠'][i%5]}</div>`).join('')}
       </div>
       <div class="relative text-center text-white">
-        <div class="text-8xl mb-6">🐾</div>
+        <div class="mb-6 flex justify-center">${icon('paw','w-20 h-20')}</div>
         <h1 class="text-4xl font-bold mb-3">MyPets 3.0</h1>
         <p class="text-lg text-purple-100 max-w-xs mx-auto">Tu compañero digital para el cuidado integral de tus mascotas</p>
         <div class="mt-8 grid grid-cols-2 gap-4 text-sm">
-          <div class="bg-white/10 rounded-xl p-3"><div class="text-2xl mb-1">📋</div>Ficha médica completa</div>
-          <div class="bg-white/10 rounded-xl p-3"><div class="text-2xl mb-1">🔔</div>Alertas automáticas</div>
-          <div class="bg-white/10 rounded-xl p-3"><div class="text-2xl mb-1">💊</div>Control de medicamentos</div>
-          <div class="bg-white/10 rounded-xl p-3"><div class="text-2xl mb-1">💰</div>Control de gastos</div>
+          <div class="bg-white/10 rounded-xl p-3"><div class="mb-1 flex justify-center">${icon('clipboard','w-6 h-6')}</div>Ficha médica completa</div>
+          <div class="bg-white/10 rounded-xl p-3"><div class="mb-1 flex justify-center">${icon('bell','w-6 h-6')}</div>Alertas automáticas</div>
+          <div class="bg-white/10 rounded-xl p-3"><div class="mb-1 flex justify-center">${icon('pill','w-6 h-6')}</div>Control de medicamentos</div>
+          <div class="bg-white/10 rounded-xl p-3"><div class="mb-1 flex justify-center">${icon('money','w-6 h-6')}</div>Control de gastos</div>
         </div>
       </div>
     </div>
@@ -604,7 +658,7 @@ function viewLogin() {
           <div class="mt-4">
             <button type="button" onclick="loadDemoAndLogin()"
               class="w-full py-2.5 rounded-xl bg-brand-600 text-white text-sm font-bold hover:bg-brand-700 transition-colors">
-              🧪 Ingresar con datos de prueba
+              ${icon('flask','w-4 h-4 inline align-text-bottom')} Ingresar con datos de prueba
             </button>
           </div>
         </div>
@@ -659,7 +713,7 @@ function viewResetPassword() {
   <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 to-teal-50 p-6">
     <div class="w-full max-w-sm animate-scale-in">
       <div class="text-center mb-6">
-        <div class="text-4xl mb-2">🔐</div>
+        <div class="mb-2 flex justify-center text-gray-300">${icon('lock','w-10 h-10')}</div>
         <h2 class="text-2xl font-bold text-gray-900">Nueva contraseña</h2>
         <p class="text-sm text-gray-500 mt-1">Crea una contraseña segura</p>
       </div>
@@ -689,7 +743,7 @@ async function handleResetPassword() {
   if (error) { showToast('Error: ' + error.message, 'error'); return; }
   await sb.auth.signOut();
   state.isLoggedIn = false; state.user = null;
-  showToast('✅ Contraseña actualizada. Inicia sesión.', 'success');
+  showToast('Contraseña actualizada. Inicia sesión.', 'success');
   navigate('login');
 }
 
@@ -699,7 +753,7 @@ function viewForgot() {
   <div class="min-h-screen flex items-center justify-center bg-gradient-to-br from-brand-50 to-teal-50 p-6">
     <div class="w-full max-w-sm animate-scale-in">
       <div class="text-center mb-6">
-        <div class="text-4xl mb-2">🔑</div>
+        <div class="mb-2 flex justify-center text-gray-300">${icon('key','w-10 h-10')}</div>
         <h2 class="text-2xl font-bold text-gray-900">Recuperar contraseña</h2>
         <p class="text-sm text-gray-500 mt-1">Te enviaremos un enlace por email</p>
       </div>
@@ -728,7 +782,7 @@ function viewDashboard() {
         <p class="text-sm text-gray-400 mt-0.5 capitalize">${dateStr0}</p>
       </div>
       <div class="bg-white rounded-2xl shadow-sm p-6 md:p-10 text-center max-w-2xl mx-auto mt-4 md:mt-8">
-        <div class="text-5xl mb-4">🐾</div>
+        <div class="mb-4 flex justify-center text-brand-400">${icon('paw','w-14 h-14')}</div>
         <h2 class="text-lg md:text-xl font-bold text-gray-900 mb-2">Empecemos con tu primera mascota</h2>
         <p class="text-sm text-gray-500 mb-8 max-w-md mx-auto">Regístrala para llevar su ficha de salud, agenda y gastos en un solo lugar. Solo toma un par de minutos.</p>
         <div class="grid sm:grid-cols-3 gap-3 mb-8 text-left">
@@ -755,11 +809,11 @@ function viewDashboard() {
 
   const alerts = pets.flatMap(p => [
     ...(p.vaccines || []).filter(v => v.nextDate && careAlertStatus(v.nextDate, v.alertType, v.alertDays).status !== 'al_dia')
-      .map(v => ({ ...v, icon: '💉', status: careAlertStatus(v.nextDate, v.alertType, v.alertDays) })),
+      .map(v => ({ ...v, icon: 'flask', status: careAlertStatus(v.nextDate, v.alertType, v.alertDays) })),
     ...(p.deworming || []).filter(d => d.nextDate && careAlertStatus(d.nextDate, d.alertType, d.alertDays).status !== 'al_dia')
-      .map(d => ({ ...d, name: d.product, icon: '🪱', status: careAlertStatus(d.nextDate, d.alertType, d.alertDays) })),
+      .map(d => ({ ...d, name: d.product, icon: 'bug', status: careAlertStatus(d.nextDate, d.alertType, d.alertDays) })),
     ...(p.medications || []).filter(m => m.endDate && m.endDate <= today)
-      .map(m => ({ ...m, icon: '💊', status: { status: 'vencido', label: 'Tratamiento finalizado', badge: 'bg-red-100 text-red-600' } })),
+      .map(m => ({ ...m, icon: 'pill', status: { status: 'vencido', label: 'Tratamiento finalizado', badge: 'bg-red-100 text-red-600' } })),
   ]);
   const overdueCount = alerts.filter(a => a.status.status === 'vencido').length;
   const upcoming = (state.events || []).filter(e => e.date >= today).slice(0, 3);
@@ -772,10 +826,10 @@ function viewDashboard() {
       <p class="text-sm text-gray-400 mt-0.5 capitalize">${dateStr}</p>
     </div>
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4 mb-6 stagger">
-      ${statCard('🐾', 'Mascotas', pets.length, 'brand')}
-      ${statCard('🔔', 'Alertas activas', alerts.length, 'red')}
-      ${statCard('📅', 'Eventos próximos', upcoming.length, 'amber')}
-      ${statCard('💊', 'Medicamentos hoy', todayMeds.length, 'teal')}
+      ${statCard(icon('paw','w-5 h-5 md:w-6 md:h-6'), 'Mascotas', pets.length, 'brand')}
+      ${statCard(icon('bell','w-5 h-5 md:w-6 md:h-6'), 'Alertas activas', alerts.length, 'red')}
+      ${statCard(icon('calendar','w-5 h-5 md:w-6 md:h-6'), 'Eventos próximos', upcoming.length, 'amber')}
+      ${statCard(icon('pill','w-5 h-5 md:w-6 md:h-6'), 'Medicamentos hoy', todayMeds.length, 'teal')}
     </div>
 
     <div class="grid md:grid-cols-2 gap-4 md:gap-6">
@@ -786,7 +840,7 @@ function viewDashboard() {
         </div>
         ${pets.length === 0
           ? `<div class="text-center py-8">
-               <div class="text-4xl mb-2">🐾</div>
+               <div class="mb-2 flex justify-center text-gray-300">${icon('paw','w-10 h-10')}</div>
                <p class="text-sm text-gray-400 mb-3">Aún no tienes mascotas registradas</p>
                <button onclick="navigate('addPet')" class="btn-primary text-sm">+ Agregar mascota</button>
              </div>`
@@ -811,13 +865,13 @@ function viewDashboard() {
         </div>
         ${upcoming.length === 0
           ? `<div class="text-center py-8">
-               <div class="text-4xl mb-2">📅</div>
+               <div class="mb-2 flex justify-center text-gray-300">${icon('calendar','w-10 h-10')}</div>
                <p class="text-sm text-gray-400 mb-3">Sin eventos próximos</p>
                <button onclick="navigate('calendar')" class="btn-primary text-sm">Agendar evento</button>
              </div>`
           : upcoming.map(e => `
               <div class="flex items-start gap-3 p-3 rounded-xl border border-gray-100 mb-2">
-                <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-xl">${eventIcon(e.type)}</div>
+                <div class="w-10 h-10 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600">${icon(eventIcon(e.type),'w-5 h-5')}</div>
                 <div>
                   <div class="text-sm font-medium text-gray-900">${e.title}</div>
                   <div class="text-xs text-gray-400">${formatDate(e.date)} · ${e.pet || 'Sin mascota'}</div>
@@ -827,11 +881,11 @@ function viewDashboard() {
 
       ${alerts.length > 0 ? `
       <div class="md:col-span-2 ${overdueCount > 0 ? 'bg-red-50 border-red-100' : 'bg-amber-50 border-amber-100'} border rounded-2xl p-5">
-        <h2 class="font-semibold ${overdueCount > 0 ? 'text-red-700' : 'text-amber-700'} mb-3">⚠️ Alertas${overdueCount > 0 ? ` (${overdueCount} vencida${overdueCount!==1?'s':''})` : ''}</h2>
+        <h2 class="font-semibold ${overdueCount > 0 ? 'text-red-700' : 'text-amber-700'} mb-3 flex items-center gap-1.5">${icon('warning','w-4 h-4')} Alertas${overdueCount > 0 ? ` (${overdueCount} vencida${overdueCount!==1?'s':''})` : ''}</h2>
         <div class="space-y-2">
           ${alerts.slice(0,4).map(a => `
             <div class="flex items-center gap-3 bg-white rounded-xl p-3">
-              <span class="text-xl">${a.icon}</span>
+              <span class="text-gray-500">${icon(a.icon,'w-5 h-5')}</span>
               <div class="flex-1"><div class="text-sm font-medium text-gray-800">${a.name}</div>
               <div class="text-xs text-gray-400">Vence: ${formatDate(a.nextDate || a.endDate)}</div></div>
               <span class="badge ${a.status.badge} text-xs flex-shrink-0">${a.status.label}</span>
@@ -881,11 +935,11 @@ function viewDashboard() {
         const ageYears = p.dateOfBirth ? Math.floor((Date.now() - new Date(p.dateOfBirth).getTime()) / (365.25*86400000)) : 0;
         const lastVaccDate = (p.vaccines||[]).reduce((max,v) => v.date>max?v.date:max, '');
         const vaccineAge = lastVaccDate ? Math.floor((Date.now()-new Date(lastVaccDate).getTime())/(30.44*86400000)) : 999;
-        if (p.species === 'Perro' && ageYears >= 7) recs.push({ icon:'🔬', text:`${p.name} tiene ${ageYears} años. Considera análisis de sangre anual para detección temprana.` });
-        if (p.species === 'Perro' && (p.breed||'').match(/Golden Retriever|Labrador/i)) recs.push({ icon:'🦴', text:`Los ${p.breed}s son propensos a displasia de cadera. Consulta con tu vet sobre control radiológico.` });
-        if (p.species === 'Gato' && ageYears >= 10) recs.push({ icon:'🐈', text:`${p.name} es un gato senior (${ageYears} años). Necesita revisiones veterinarias cada 6 meses.` });
-        if (!p.vet?.name) recs.push({ icon:'📋', text:`${p.name} no tiene datos de veterinario. Regístralos para tener acceso rápido en emergencias.` });
-        if (vaccineAge >= 12) recs.push({ icon:'💉', text:`${p.name} lleva más de un año sin registrar vacunas. Revisa el calendario de vacunación.` });
+        if (p.species === 'Perro' && ageYears >= 7) recs.push({ icon:'flask', text:`${p.name} tiene ${ageYears} años. Considera análisis de sangre anual para detección temprana.` });
+        if (p.species === 'Perro' && (p.breed||'').match(/Golden Retriever|Labrador/i)) recs.push({ icon:'warning', text:`Los ${p.breed}s son propensos a displasia de cadera. Consulta con tu vet sobre control radiológico.` });
+        if (p.species === 'Gato' && ageYears >= 10) recs.push({ icon:'heart', text:`${p.name} es un gato senior (${ageYears} años). Necesita revisiones veterinarias cada 6 meses.` });
+        if (!p.vet?.name) recs.push({ icon:'clipboard', text:`${p.name} no tiene datos de veterinario. Regístralos para tener acceso rápido en emergencias.` });
+        if (vaccineAge >= 12) recs.push({ icon:'flask', text:`${p.name} lleva más de un año sin registrar vacunas. Revisa el calendario de vacunación.` });
       });
 
       const shownRecs = recs.slice(0,2);
@@ -896,16 +950,16 @@ function viewDashboard() {
       <div class="grid md:grid-cols-3 gap-4 mt-4">
         ${streakCards.length ? `
         <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
-          <h2 class="font-semibold text-gray-900 mb-3">🔥 Rachas de medicamentos</h2>
+          <h2 class="font-semibold text-gray-900 mb-3 flex items-center gap-1.5">${icon('fire','w-4 h-4 text-orange-500')} Rachas de medicamentos</h2>
           <div class="space-y-2">
             ${streakCards.map(s => s.streak > 0
               ? `<div class="flex items-center gap-2 p-2.5 bg-orange-50 rounded-xl">
-                   <span class="text-xl">🔥</span>
+                   <span class="text-orange-500">${icon('fire','w-5 h-5')}</span>
                    <div><div class="text-sm font-semibold text-gray-800">${s.name}</div>
                    <div class="text-xs text-orange-600">${s.streak} día${s.streak!==1?'s':''} seguido${s.streak!==1?'s':''} sin saltarse una dosis</div></div>
                  </div>`
               : `<div class="flex items-center gap-2 p-2.5 bg-gray-50 rounded-xl">
-                   <span class="text-xl">💪</span>
+                   <span class="text-gray-400">${icon('fire','w-5 h-5')}</span>
                    <div class="text-sm text-gray-600">¡Empieza hoy tu racha con ${s.name}!</div>
                  </div>`
             ).join('')}
@@ -929,11 +983,11 @@ function viewDashboard() {
 
         ${shownRecs.length ? `
         <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
-          <h2 class="font-semibold text-gray-900 mb-3">💡 Recomendaciones</h2>
+          <h2 class="font-semibold text-gray-900 mb-3 flex items-center gap-1.5">${icon('idea','w-4 h-4 text-amber-500')} Recomendaciones</h2>
           <div class="space-y-2">
             ${shownRecs.map(r => `
               <div class="flex items-start gap-2 p-2.5 bg-yellow-50 rounded-xl">
-                <span class="text-lg flex-shrink-0">${r.icon}</span>
+                <span class="text-gray-400 flex-shrink-0">${icon(r.icon,'w-5 h-5')}</span>
                 <p class="text-xs text-gray-700 leading-snug">${r.text}</p>
               </div>`).join('')}
           </div>
@@ -944,7 +998,7 @@ function viewDashboard() {
 }
 
 function eventIcon(t) {
-  return { Consulta:'🏥', Examen:'🔬', Peluquería:'✂️', Hotel:'🏨', Vacuna:'💉', Otro:'📌' }[t] || '📌';
+  return { Consulta:'hospital', Examen:'flask', Peluquería:'scissors', Hotel:'building', Vacuna:'flask', Otro:'pin' }[t] || 'pin';
 }
 
 // ---- VISTA: MASCOTAS ----
@@ -957,7 +1011,7 @@ function viewPets() {
          <span>Agregar mascota</span>
        </button>`)}
     ${pets.length === 0
-      ? emptyState('🐾', 'Aún no tienes mascotas', 'Registra tu primera mascota para comenzar', '+ Agregar mascota', "navigate('addPet')")
+      ? emptyState('paw', 'Aún no tienes mascotas', 'Registra tu primera mascota para comenzar', '+ Agregar mascota', "navigate('addPet')")
       : `<div class="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 stagger">
            ${pets.map(p => `
              <div class="bg-white rounded-2xl shadow-sm p-5 card-hover animate-fade-in relative flex flex-col">
@@ -1044,7 +1098,7 @@ function stepBasic() {
     <div class="space-y-4">
       <div class="flex flex-col items-center mb-4">
         <div id="photo-preview" class="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center text-4xl mb-2 overflow-hidden">
-          ${d.photo ? `<img src="${d.photo}" class="w-full h-full object-cover" />` : '🐾'}
+          ${d.photo ? `<img src="${d.photo}" class="w-full h-full object-cover" />` : icon('paw','w-8 h-8 text-gray-300')}
         </div>
         <label class="cursor-pointer text-sm text-brand-600 hover:underline font-medium">
           Subir foto <input type="file" accept="image/*" class="hidden" onchange="previewPhoto(event)" />
@@ -1255,7 +1309,7 @@ function stepTutors() {
         </div>
       </div>
       <div class="bg-teal-50 rounded-xl p-4 text-sm text-teal-700">
-        🐾 Tu mascota quedará registrada con toda la información ingresada. ¡Podrás editarla en cualquier momento!
+        Tu mascota quedará registrada con toda la información ingresada. ¡Podrás editarla en cualquier momento!
       </div>
     </div>`;
 }
@@ -1417,17 +1471,17 @@ function tabVaccines(pet) {
         <button onclick="openVaccineModal('${pet.id}')" class="btn-primary text-sm">+ Agregar</button>
       </div>
       ${total === 0
-        ? emptyState('💉','Sin vacunas registradas','Agrega el historial de vacunación')
+        ? emptyState('flask','Sin vacunas registradas','Agrega el historial de vacunación')
         : `<div class="space-y-3">
              ${vs.map(v => { const st = careAlertStatus(v.nextDate, v.alertType, v.alertDays); return `
                <div class="border border-gray-100 rounded-xl p-4 flex items-start justify-between">
                  <div class="flex items-start gap-3">
-                   <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-lg">💉</div>
+                   <div class="w-9 h-9 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">${icon('flask','w-4.5 h-4.5')}</div>
                    <div>
                      <div class="font-medium text-gray-900 text-sm">${v.name}</div>
                      <div class="text-xs text-gray-400">${v.code ? `Código: ${v.code} · ` : ''}Aplicada: ${formatDate(v.date)}</div>
                      ${v.nextDate ? `<div class="text-xs mt-1 ${st.color}">Próxima: ${formatDate(v.nextDate)}${st.label ? ` · <span class="badge ${st.badge}">${st.label}</span>` : ''}</div>` : ''}
-                     ${v.alertType ? `<div class="text-xs text-brand-500">🔔 Alerta configurada: ${{same:'El mismo día',week:'1 semana antes',custom:`${v.alertDays} días antes`}[v.alertType]||v.alertType}</div>` : ''}
+                     ${v.alertType ? `<div class="text-xs text-brand-500 flex items-center gap-1">${icon('bell','w-3 h-3')} Alerta configurada: ${{same:'El mismo día',week:'1 semana antes',custom:`${v.alertDays} días antes`}[v.alertType]||v.alertType}</div>` : ''}
                      ${v.cost ? `<div class="text-xs text-gray-400">Costo: ${fmtCLP(v.cost)}</div>` : ''}
                    </div>
                  </div>
@@ -1460,11 +1514,11 @@ function tabDeworming(pet) {
         <button onclick="openDewormModal('${pet.id}')" class="btn-primary text-sm">+ Agregar</button>
       </div>
       ${total === 0
-        ? emptyState('🪱','Sin desparasitaciones','Registra los tratamientos antiparasitarios')
+        ? emptyState('bug','Sin desparasitaciones','Registra los tratamientos antiparasitarios')
         : `<div class="space-y-2">
              ${ds.map(d => { const st = careAlertStatus(d.nextDate, d.alertType, d.alertDays); return `
                <div class="flex items-center gap-3 p-3 rounded-xl border border-gray-100 hover:border-teal-200 hover:bg-teal-50/30 transition-colors group">
-                 <div class="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center text-base flex-shrink-0">🪱</div>
+                 <div class="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600 flex-shrink-0">${icon('bug','w-4.5 h-4.5')}</div>
                  <div class="flex-1 min-w-0">
                    <div class="flex items-center gap-2 flex-wrap">
                      <span class="font-medium text-gray-900 text-sm">${d.product}</span>
@@ -1473,7 +1527,7 @@ function tabDeworming(pet) {
                    <div class="text-xs text-gray-400">${d.format} · Dosis: ${d.dose} ${d.unit} · ${formatDate(d.date)}</div>
                    ${d.nextDate ? `<div class="text-xs ${st.color} font-medium">Próxima: ${formatDate(d.nextDate)}${st.label ? ` · <span class="badge ${st.badge}">${st.label}</span>` : ''}</div>` : ''}
                  </div>
-                 <div class="flex items-center gap-1 flex-shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                 <div class="flex items-center gap-1 flex-shrink-0 md:opacity-0 md:group-hover:opacity-100 transition-opacity">
                    <button onclick="openEditDewormModal('${pet.id}','${d.id}')" title="Editar"
                      class="w-8 h-8 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 flex items-center justify-center transition-colors">
                      <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
@@ -1506,12 +1560,12 @@ function tabMedications(pet) {
         <div class="flex items-center gap-2">
           ${hasActive ? (doseGivenToday
             ? `<span class="badge bg-green-100 text-green-700">✓ Dosis de hoy registrada</span>`
-            : `<button onclick="markDoseTaken('${pet.id}')" class="btn-secondary text-sm">🔥 Marcar dosis de hoy</button>`) : ''}
+            : `<button onclick="markDoseTaken('${pet.id}')" class="btn-secondary text-sm flex items-center gap-1.5">${icon('fire','w-4 h-4')} Marcar dosis de hoy</button>`) : ''}
           <button onclick="openMedModal('${pet.id}')" class="btn-primary text-sm">+ Agregar</button>
         </div>
       </div>
       ${total === 0
-        ? emptyState('💊','Sin tratamientos','Registra tratamientos activos e historial')
+        ? emptyState('pill','Sin tratamientos','Registra tratamientos activos e historial')
         : `<div class="space-y-3">
              ${ms.map(m => {
                const isExpired  = m.expiry && m.expiry < today;
@@ -1521,7 +1575,7 @@ function tabMedications(pet) {
                <div class="border border-gray-100 rounded-2xl p-4 hover:border-brand-200 transition-colors">
                  <div class="flex items-start justify-between gap-3">
                    <div class="flex items-start gap-3 flex-1 min-w-0">
-                     <div class="w-10 h-10 rounded-xl ${m.active?'bg-brand-50':'bg-gray-50'} flex items-center justify-center text-xl flex-shrink-0">💊</div>
+                     <div class="w-10 h-10 rounded-xl ${m.active?'bg-brand-50 text-brand-600':'bg-gray-50 text-gray-400'} flex items-center justify-center flex-shrink-0">${icon('pill','w-5 h-5')}</div>
                      <div class="flex-1 min-w-0">
                        <div class="flex items-center gap-2 flex-wrap">
                          <span class="font-semibold text-gray-900">${m.name}</span>
@@ -1533,10 +1587,10 @@ function tabMedications(pet) {
                          ${m.dose || `${m.doseVal||''} ${m.doseUnit||''}`} · ${m.frequency}
                        </div>
                        <div class="text-xs text-gray-400">
-                         📅 ${formatDate(m.startDate)}${m.endDate ? ` → ${formatDate(m.endDate)}` : ''}
+                         ${icon('calendar','w-3 h-3 inline align-text-bottom')} ${formatDate(m.startDate)}${m.endDate ? ` → ${formatDate(m.endDate)}` : ''}
                          ${m.startTime ? ` · ⏰ ${m.startTime}` : ''}
                        </div>
-                       ${m.reminder ? `<div class="text-xs text-brand-500 mt-0.5">🔔 ${reminderLabel}</div>` : ''}
+                       ${m.reminder ? `<div class="text-xs text-brand-500 mt-0.5 flex items-center gap-1">${icon('bell','w-3 h-3')} ${reminderLabel}</div>` : ''}
                        ${(() => { const ms = medStockStatus(m); if (!ms) return ''; const barColor = { critico:'bg-red-400', bajo:'bg-amber-400', ok:'bg-green-400' }[ms.level]; return `
                          <div class="mt-2">
                            <div class="flex justify-between text-xs text-gray-500 mb-1">
@@ -1581,7 +1635,7 @@ function tabHistory(pet) {
         <button onclick="openHistoryModal('${pet.id}')" class="btn-primary text-sm">+ Agregar</button>
       </div>
       ${total === 0
-        ? emptyState('📋','Sin historial clínico','Registra eventos, procedimientos y adjunta documentos')
+        ? emptyState('clipboard','Sin historial clínico','Registra eventos, procedimientos y adjunta documentos')
         : `<div class="relative pl-6">
              <div class="absolute left-2 top-0 bottom-0 w-0.5 bg-gray-200"></div>
              ${[...hs].reverse().map(h => `
@@ -1605,7 +1659,7 @@ function tabHistory(pet) {
                              </a>` : `
                              <a href="${f.data}" download="${f.name}"
                                class="flex items-center gap-1.5 px-3 py-1.5 bg-gray-50 hover:bg-gray-100 border border-gray-200 rounded-lg text-xs text-gray-700 transition-colors">
-                               📎 ${f.name}
+                               ${icon('paperclip','w-3 h-3 inline align-text-bottom')} ${f.name}
                              </a>`).join('')}
                          </div>` : ''}
                      </div>
@@ -1630,7 +1684,7 @@ function tabHistory(pet) {
 // ---- VISTA: CALENDARIO ----
 function viewCalendar() {
   if (state.pets.length === 0) {
-    return noPetsOnboarding('📅', 'Tu agenda está esperando', 'Registra una mascota primero para poder agendar vacunas, controles y otros eventos.');
+    return noPetsOnboarding('calendar', 'Tu agenda está esperando', 'Registra una mascota primero para poder agendar vacunas, controles y otros eventos.');
   }
   const now = new Date();
   const year = state.calYear || now.getFullYear();
@@ -1645,13 +1699,40 @@ function viewCalendar() {
   for (let i = 0; i < startDow; i++) days.push(null);
   for (let d = 1; d <= lastDay.getDate(); d++) days.push(d);
 
-  return appShell(`
-    ${pageHeader('Agenda', monthName,
-      `<button onclick="openEventModal()" class="btn-primary flex items-center gap-1.5">
-         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
-         <span>Crear evento</span>
-       </button>`)}
+  const calView = state.calViewMode || 'calendario';
 
+  const eventsListPanel = (() => {
+    const upcoming = events.filter(e=>e.date>=today).sort((a,b)=>a.date>b.date?1:-1);
+    const { items: evPage, total, pages, page } = paginate(upcoming, 'events');
+    return `
+    <div class="bg-white rounded-2xl shadow-sm p-5">
+      <div class="flex items-center justify-between mb-4">
+        <div>
+          <h3 class="font-semibold text-gray-800">Próximos eventos</h3>
+          ${total > 0 ? `<p class="text-xs text-gray-400 mt-0.5">${total} evento${total!==1?'s':''}</p>` : ''}
+        </div>
+      </div>
+      ${total === 0
+        ? emptyState('calendar','Sin eventos próximos','Crea tu primer evento para verlo aquí','+ Crear evento','openEventModal()')
+        : `<div class="space-y-1">
+             ${evPage.map(e => `
+               <div class="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-gray-50 transition-colors group">
+                 <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center text-amber-600 flex-shrink-0">${icon(eventIcon(e.type),'w-4.5 h-4.5')}</div>
+                 <div class="flex-1 min-w-0">
+                   <div class="text-sm font-medium text-gray-900 truncate">${e.title}</div>
+                   <div class="text-xs text-gray-400">${formatDate(e.date)}${e.pet ? ` · ${e.pet}` : ''}</div>
+                 </div>
+                 <button onclick="deleteEvent('${e.id}')"
+                   class="w-7 h-7 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors md:opacity-0 md:group-hover:opacity-100">
+                   ${icon('trash','w-3.5 h-3.5')}
+                 </button>
+               </div>`).join('')}
+           </div>
+           ${pagerHTML('events', pages, page)}`}
+    </div>`;
+  })();
+
+  const calendarGridPanel = `
     <div class="bg-white rounded-2xl shadow-sm p-3 md:p-4 mb-6">
       <div class="flex items-center justify-between mb-3">
         <button onclick="prevMonth()" class="w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-gray-600 font-medium">‹</button>
@@ -1659,7 +1740,7 @@ function viewCalendar() {
         <button onclick="nextMonth()" class="w-9 h-9 rounded-xl border border-gray-200 hover:bg-gray-50 flex items-center justify-center text-gray-600 font-medium">›</button>
       </div>
       <div class="grid grid-cols-7 gap-0.5 mb-1">
-        ${['D','L','M','X','J','V','S'].map((d,i) => `<div class="text-center text-[10px] md:text-xs font-medium text-gray-400 py-1">${d}</div>`).join('')}
+        ${['D','L','M','X','J','V','S'].map((d,i) => `<div class="text-center text-[10px] md:text-xs font-medium text-gray-500 py-1">${d}</div>`).join('')}
       </div>
       <div class="grid grid-cols-7 gap-0.5">
         ${days.map((d, i) => {
@@ -1673,7 +1754,7 @@ function viewCalendar() {
             <button type="button" onclick="openEventModal('${dateStr}')" class="calendar-day ${isToday?'today':''} relative w-full text-left" aria-label="${ariaLabel}" aria-current="${isToday ? 'date' : 'false'}">
               <div class="text-[10px] md:text-xs font-semibold ${isToday?'text-brand-600':'text-gray-700'}">${d}</div>
               ${dayEvents.slice(0,2).map(e => `
-                <div class="hidden md:block text-xs mt-0.5 px-1 py-0.5 rounded bg-brand-100 text-brand-700 truncate">${eventIcon(e.type)} ${e.title}</div>
+                <div class="hidden md:block text-xs mt-0.5 px-1 py-0.5 rounded bg-brand-100 text-brand-700 truncate flex items-center gap-1">${icon(eventIcon(e.type),'w-3 h-3 flex-shrink-0')} ${e.title}</div>
                 <div class="md:hidden mt-0.5 w-1.5 h-1.5 rounded-full bg-brand-400 mx-auto"></div>
               `).join('')}
             </button>`;
@@ -1681,43 +1762,32 @@ function viewCalendar() {
       </div>
     </div>
 
-    <div class="bg-white rounded-2xl shadow-sm p-5">
-      ${(() => {
-        const upcoming = events.filter(e=>e.date>=today).sort((a,b)=>a.date>b.date?1:-1);
-        const { items: evPage, total, pages, page } = paginate(upcoming, 'events');
-        return `
-        <div class="flex items-center justify-between mb-4">
-          <div>
-            <h3 class="font-semibold text-gray-800">Próximos eventos</h3>
-            ${total > 0 ? `<p class="text-xs text-gray-400 mt-0.5">${total} evento${total!==1?'s':''}</p>` : ''}
-          </div>
-        </div>
-        ${total === 0
-          ? `<p class="text-sm text-gray-400 text-center py-8">Sin eventos próximos</p>`
-          : `<div class="space-y-1">
-               ${evPage.map(e => `
-                 <div class="flex items-center gap-3 py-2.5 px-3 rounded-xl hover:bg-gray-50 transition-colors group">
-                   <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center text-base flex-shrink-0">${eventIcon(e.type)}</div>
-                   <div class="flex-1 min-w-0">
-                     <div class="text-sm font-medium text-gray-900 truncate">${e.title}</div>
-                     <div class="text-xs text-gray-400">${formatDate(e.date)}${e.pet ? ` · ${e.pet}` : ''}</div>
-                   </div>
-                   <button onclick="deleteEvent('${e.id}')"
-                     class="w-7 h-7 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors opacity-0 group-hover:opacity-100">
-                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                   </button>
-                 </div>`).join('')}
-             </div>
-             ${pagerHTML('events', pages, page)}`}`;
-      })()}
-    </div>
+    ${eventsListPanel}`;
+
+  return appShell(`
+    ${pageHeader('Agenda', monthName,
+      `<div class="flex items-center gap-2 flex-wrap justify-end">
+         <div class="flex rounded-xl overflow-hidden border border-gray-200 text-sm font-medium">
+           ${[['calendario','calendar','Calendario'],['lista','menu','Lista']].map(([v,ic,label])=>`
+             <button onclick="state.calViewMode='${v}';render()"
+               class="px-3 py-1.5 flex items-center gap-1.5 transition-colors ${calView===v?'bg-brand-600 text-white':'text-gray-500 hover:bg-gray-50'}">
+               ${icon(ic,'w-3.5 h-3.5')} ${label}
+             </button>`).join('')}
+         </div>
+         <button onclick="openEventModal()" class="btn-primary flex items-center gap-1.5">
+           ${icon('plus','w-4 h-4')}
+           <span>Crear evento</span>
+         </button>
+       </div>`)}
+
+    ${calView === 'calendario' ? calendarGridPanel : eventsListPanel}
   `);
 }
 
 // ---- VISTA: FINANZAS ----
 function viewFinance() {
   if (state.pets.length === 0) {
-    return noPetsOnboarding('💰', 'Aún no hay gastos que mostrar', 'Registra una mascota primero para empezar a llevar el control de sus gastos veterinarios, alimentación y más.');
+    return noPetsOnboarding('money', 'Aún no hay gastos que mostrar', 'Registra una mascota primero para empezar a llevar el control de sus gastos veterinarios, alimentación y más.');
   }
   const allExpenses = state.expenses || [];
   const pets = state.pets;
@@ -1812,7 +1882,7 @@ function viewFinance() {
   }, 100);
 
   return appShell(`
-    ${pageHeader('Finanzas 💰', 'Control de gastos por mascota',
+    ${pageHeader('Finanzas', 'Control de gastos por mascota',
       `<button onclick="openExpenseModal()" class="btn-primary flex items-center gap-1.5">
          <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4"/></svg>
          <span>Registrar gasto</span>
@@ -1834,7 +1904,7 @@ function viewFinance() {
           ${['listado','grafico'].map(m=>`
             <button onclick="state.finView='${m}';render()"
               class="px-3 py-1.5 transition-colors ${viewMode===m?'bg-brand-600 text-white':'text-gray-500 hover:bg-gray-50'}">
-              ${m==='listado'?'☰ Lista':'📊 Gráfico'}
+              ${m==='listado'?icon('menu','w-3.5 h-3.5 inline align-text-bottom')+' Lista':icon('chartBar','w-3.5 h-3.5 inline align-text-bottom')+' Gráfico'}
             </button>`).join('')}
         </div>
       </div>
@@ -1845,7 +1915,8 @@ function viewFinance() {
           ${['mensual','trimestral','semestral','anual'].map(p=>`
             <button onclick="state.finPeriod='${p}';render()"
               class="px-2.5 md:px-3 py-1.5 transition-colors ${period===p?'bg-brand-600 text-white':'text-gray-500 hover:bg-gray-50'}">
-              ${{mensual:'Mensual',trimestral:'Trimest.',semestral:'Semest.',anual:'Anual'}[p]}
+              <span class="md:hidden">${{mensual:'Mensual',trimestral:'Trimest.',semestral:'Semest.',anual:'Anual'}[p]}</span>
+              <span class="hidden md:inline">${{mensual:'Mensual',trimestral:'Trimestral',semestral:'Semestral',anual:'Anual'}[p]}</span>
             </button>`).join('')}
         </div>
       </div>
@@ -1853,10 +1924,10 @@ function viewFinance() {
 
     <!-- Widgets -->
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
-      ${statCard('💰','Total '+(petFilter||'todas'), fmtCLP(total), 'brand')}
-      ${statCard('📅','Este mes', fmtCLP(monthTotal), 'teal')}
-      ${statCard('🧾','Registros', expenses.length, 'amber')}
-      ${statCard('🐾','Mascotas', pets.length, 'brand')}
+      ${statCard(icon('money','w-5 h-5 md:w-6 md:h-6'),'Total '+(petFilter||'todas'), fmtCLP(total), 'brand')}
+      ${statCard(icon('calendar','w-5 h-5 md:w-6 md:h-6'),'Este mes', fmtCLP(monthTotal), 'teal')}
+      ${statCard(icon('receipt','w-5 h-5 md:w-6 md:h-6'),'Registros', expenses.length, 'amber')}
+      ${statCard(icon('paw','w-5 h-5 md:w-6 md:h-6'),'Mascotas', pets.length, 'brand')}
     </div>
 
     ${viewMode === 'grafico' ? `
@@ -1917,7 +1988,7 @@ function viewFinance() {
           </div>
         </div>
         ${expTotal === 0
-          ? emptyState('💸','Sin gastos registrados','Comienza a registrar los gastos de tus mascotas')
+          ? emptyState('money','Sin gastos registrados','Comienza a registrar los gastos de tus mascotas')
           : `<div class="overflow-x-auto -mx-5 px-5">
                <table class="w-full text-sm min-w-[540px]">
                  <thead>
@@ -1942,7 +2013,7 @@ function viewFinance() {
                        <td class="py-3 text-right font-bold text-gray-900 whitespace-nowrap">${fmtCLP(e.amount)}</td>
                        <td class="py-3 text-right">
                          <button onclick="deleteExpense('${e.id}')"
-                           class="w-7 h-7 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors ml-auto opacity-0 group-hover:opacity-100">
+                           class="w-7 h-7 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors ml-auto md:opacity-0 md:group-hover:opacity-100">
                            <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
                          </button>
                        </td>
@@ -1983,7 +2054,7 @@ function viewFinance() {
 
       return `
       <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5 mt-4">
-        <h3 class="font-semibold text-gray-800 mb-1">📊 Predicción de gastos</h3>
+        <h3 class="font-semibold text-gray-800 mb-1 flex items-center gap-1.5">${icon('chartBar','w-4 h-4')} Predicción de gastos</h3>
         <p class="text-xs text-gray-400 mb-3">Basado en los últimos 3 meses${hadOutliers ? ' · excluye el efecto de gastos puntuales grandes' : ''}</p>
         <div class="flex items-center gap-4 flex-wrap">
           <div>
@@ -2108,7 +2179,7 @@ function openDewormModal(petId) {
             <div id="d-unit-badge" class="px-3 py-2 bg-teal-50 text-teal-700 rounded-xl text-sm font-semibold whitespace-nowrap"></div>
           </div>
           <div id="d-dose-preview" class="hidden bg-gray-50 border border-gray-200 rounded-xl px-4 py-2 text-sm text-gray-700">
-            📋 Se registrará: <span id="d-dose-preview-text" class="font-semibold text-teal-700"></span>
+            ${icon('clipboard','w-3.5 h-3.5 inline align-text-bottom')} Se registrará: <span id="d-dose-preview-text" class="font-semibold text-teal-700"></span>
           </div>
         </div>
 
@@ -2164,7 +2235,7 @@ function openMedModal(petId) {
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <div class="flex items-center gap-2 mb-1">
-        <span class="text-2xl">💊</span>
+        <span class="text-brand-500">${icon('pill','w-6 h-6')}</span>
         <h3 class="text-lg font-bold text-gray-900">Registrar Tratamiento</h3>
       </div>
       <p class="text-xs text-gray-400 mb-4">Los horarios se calculan automáticamente según la frecuencia</p>
@@ -2237,7 +2308,7 @@ function openMedModal(petId) {
         </div>
 
         <div>
-          <label class="form-label">🔔 Recordatorio por dosis</label>
+          <label class="form-label flex items-center gap-1">${icon('bell','w-3.5 h-3.5')} Recordatorio por dosis</label>
           <div class="grid grid-cols-2 gap-2 mt-1">
             ${[{v:'exact',l:'Horario exacto'},{v:'15',l:'15 min antes'},{v:'30',l:'30 min antes'},{v:'60',l:'60 min antes'}].map(o => `
               <button type="button" onclick="selectMedReminder('${o.v}')" id="mr-${o.v}"
@@ -2256,7 +2327,7 @@ function openMedModal(petId) {
         <hr class="border-gray-100" />
         <div>
           <div class="flex items-center justify-between mb-2">
-            <label class="text-sm font-semibold text-gray-700">📦 Stock del medicamento <span class="text-gray-400 font-normal">(opcional)</span></label>
+            <label class="text-sm font-semibold text-gray-700 flex items-center gap-1.5">${icon('box','w-4 h-4')} Stock del medicamento <span class="text-gray-400 font-normal">(opcional)</span></label>
           </div>
           <!-- Cantidad + Unidad en 2 cols, Caducidad en fila propia en mobile -->
           <div class="grid grid-cols-2 gap-3">
@@ -2317,10 +2388,10 @@ function openHistoryModal(petId) {
           <textarea id="h-notes" rows="2" class="input-field resize-none" placeholder="Observaciones..."></textarea>
         </div>
         <div>
-          <label class="form-label">📎 Adjuntar archivos <span class="text-gray-400 font-normal">(imágenes, PDFs, resultados)</span></label>
+          <label class="form-label flex items-center gap-1">${icon('paperclip','w-3.5 h-3.5')} Adjuntar archivos <span class="text-gray-400 font-normal">(imágenes, PDFs, resultados)</span></label>
           <div onclick="document.getElementById('h-files').click()"
             class="mt-1 border-2 border-dashed border-gray-200 rounded-xl p-4 text-center cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition-colors">
-            <div class="text-2xl mb-1">📂</div>
+            <div class="mb-1 flex justify-center">${icon('folder','w-6 h-6')}</div>
             <p class="text-xs text-gray-500">Haz clic para seleccionar archivos</p>
             <p class="text-xs text-gray-400">PNG, JPG, PDF (máx. 5MB c/u)</p>
           </div>
@@ -2556,7 +2627,7 @@ async function sendForgotEmail() {
     redirectTo: window.location.origin + '?reset=true'
   });
   if (error) { showToast(error.message, 'error'); return; }
-  showToast(`📧 Enlace enviado a ${email}`, 'success');
+  showToast(`Enlace enviado a ${email}`, 'success');
   setTimeout(() => navigate('login'), 2000);
 }
 
@@ -2665,7 +2736,7 @@ async function savePet() {
   state.newPetData = {}; state.addPetStep = 1;
   // Si se completaron los datos del segundo tutor en el wizard, enviamos la invitación
   if (d.tutor2?.email) await createPetInvite(pet, d.tutor2);
-  showToast(`🐾 ${pet.name} registrado con éxito!`, 'success');
+  showToast(`${pet.name} registrado con éxito!`, 'success');
   navigate('petProfile', { currentPetId: pet.id, currentTab: 'general' });
 }
 
@@ -2677,7 +2748,7 @@ function openDeletePetWithCode(petId) {
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <div class="text-center mb-4">
-        <div class="text-5xl mb-2">🗑️</div>
+        <div class="mb-2 flex justify-center text-red-400">${icon('trash','w-12 h-12')}</div>
         <h3 class="text-lg font-bold text-gray-900">Eliminar a ${pet.name}</h3>
         <p class="text-sm text-gray-500 mt-1">
           ${hasTwoTutors
@@ -2687,7 +2758,7 @@ function openDeletePetWithCode(petId) {
       </div>
       <div id="delete-step-1">
         <div class="bg-amber-50 border border-amber-100 rounded-xl p-3 text-sm text-amber-700 mb-4">
-          ⚠️ Para confirmar, enviaremos un código de verificación a:<br/>
+          ${icon('warning','w-4 h-4 inline align-text-bottom')} Para confirmar, enviaremos un código de verificación a:<br/>
           <strong>${email}</strong>
         </div>
         <div class="flex gap-3">
@@ -2721,7 +2792,7 @@ function sendDeleteCode(petId) {
   console.log(`[MyPets] Código de eliminación: ${code}`);
   document.getElementById('delete-step-1').classList.add('hidden');
   document.getElementById('delete-step-2').classList.remove('hidden');
-  showToast(`📧 Código enviado a ${state.user?.email} (demo: ${code})`, 'success');
+  showToast(`Código enviado a ${state.user?.email} (demo: ${code})`, 'success');
 }
 
 function verifyDeleteCode(petId) {
@@ -2812,7 +2883,7 @@ async function saveVaccine(e, petId) {
       alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
   }
   closeModal(); render();
-  showToast('Vacuna guardada ✅', 'success');
+  showToast('Vacuna guardada', 'success');
 }
 
 async function deleteVaccine(petId, vId) {
@@ -2849,7 +2920,7 @@ async function saveDeworming(e, petId) {
       alertType: data.alert_type, alertDays: data.alert_days, cost: data.cost });
   }
   closeModal(); render();
-  showToast('Desparasitación guardada ✅', 'success');
+  showToast('Desparasitación guardada', 'success');
 }
 
 async function deleteDeworming(petId, dId) {
@@ -2895,7 +2966,7 @@ async function saveMedication(e, petId) {
     pet.medications.push({ id: data.id, ...med });
   }
   closeModal(); render();
-  showToast('Medicamento guardado ✅', 'success');
+  showToast('Medicamento guardado', 'success');
 }
 
 async function deleteMedication(petId, mId) {
@@ -2921,7 +2992,7 @@ async function markDoseTaken(petId) {
     pet.doseLog.push({ id: data.id, medicationId: data.med_id, date: data.date, given: data.confirmed });
   }
   render();
-  showToast('¡Dosis de hoy registrada! 🔥', 'success');
+  showToast('¡Dosis de hoy registrada!', 'success');
 }
 
 function previewHistoryFiles(input) {
@@ -2931,7 +3002,7 @@ function previewHistoryFiles(input) {
   Array.from(input.files).forEach(file => {
     const el = document.createElement('div');
     el.className = 'flex items-center gap-1.5 px-2 py-1 bg-brand-50 border border-brand-100 rounded-lg text-xs text-brand-700';
-    el.textContent = `📎 ${file.name}`;
+    el.textContent = `${file.name}`;
     preview.appendChild(el);
   });
 }
@@ -2970,7 +3041,7 @@ async function saveHistory(e, petId) {
     pet.clinicalHistory.push({ id: data.id, ...record });
   }
   closeModal(); render();
-  showToast('Registro guardado ✅', 'success');
+  showToast('Registro guardado', 'success');
 }
 
 async function deleteHistory(petId, hId) {
@@ -2992,7 +3063,7 @@ async function saveEvent(e) {
   state.events.push({ id: data.id, title: data.title, date: data.date, time: data.time,
     type: data.type, petId: data.pet_id, notes: data.notes });
   closeModal(); render();
-  showToast('Evento guardado ✅', 'success');
+  showToast('Evento guardado', 'success');
 }
 
 async function deleteEvent(id) {
@@ -3013,7 +3084,7 @@ async function saveExpense(e) {
   state.expenses.push({ id: data.id, petId: data.pet_id, date: data.date,
     category: data.category, amount: data.amount, description: data.description });
   closeModal(); render();
-  showToast('Gasto guardado ✅', 'success');
+  showToast('Gasto guardado', 'success');
 }
 
 async function deleteExpense(id) {
@@ -3152,7 +3223,7 @@ function updateMedPreview() {
       times.push(`${hh}:${mm}`);
       cur += freqN * 60;
     }
-    sched.innerHTML = times.map(t => `<span class="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-lg text-sm font-semibold text-brand-700 shadow-sm">🕐 ${t}</span>`).join('');
+    sched.innerHTML = times.map(t => `<span class="inline-flex items-center gap-1 px-3 py-1 bg-white rounded-lg text-sm font-semibold text-brand-700 shadow-sm">${icon('clock','w-3.5 h-3.5')} ${t}</span>`).join('');
     box.classList.remove('hidden');
   } else if (box) {
     box.classList.add('hidden');
@@ -3365,31 +3436,28 @@ function viewBotiquin() {
   const invExpiringSoon = inventory.filter(i => i.expiryDate && i.expiryDate <= daysFromNowStr(30));
   const invLowStock = inventory.filter(i => botiquinStatus(i) !== 'disponible');
 
-  return appShell(`
-    ${pageHeader('Botiquín 🧴', 'Inventario del hogar y medicamentos de todas tus mascotas')}
+  const botTab = state.botiquinTab || 'inventario';
 
-    <div class="bg-white rounded-2xl shadow-sm p-5 mb-6">
+  const inventoryPanel = `
+    <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <div>
-          <h3 class="font-semibold text-gray-700">Inventario del hogar</h3>
-          <p class="text-xs text-gray-400 mt-0.5">Insumos y medicamentos que guardas en casa (no ligados a un tratamiento activo)</p>
-        </div>
-        <button onclick="openBotiquinItemModal()" class="btn-primary text-sm">+ Agregar item</button>
+        <p class="text-xs text-gray-400 max-w-md">Insumos y medicamentos que guardas en casa (no ligados a un tratamiento activo)</p>
+        <button onclick="openBotiquinItemModal()" class="btn-primary text-sm">+ Agregar producto</button>
       </div>
       <div class="grid grid-cols-3 gap-3 mb-4">
-        ${statCard('📦','Items', inventory.length, 'brand')}
-        ${statCard('⚠️','Stock bajo', invLowStock.length, 'amber')}
-        ${statCard('📅','Por vencer (30d)', invExpiringSoon.length, 'red')}
+        ${statCard(icon('box','w-5 h-5 md:w-6 md:h-6'),'Productos', inventory.length, 'brand')}
+        ${statCard(icon('warning','w-5 h-5 md:w-6 md:h-6'),'Stock bajo', invLowStock.length, 'amber')}
+        ${statCard(icon('calendar','w-5 h-5 md:w-6 md:h-6'),'Por vencer (30d)', invExpiringSoon.length, 'red')}
       </div>
       ${inventory.length === 0
-        ? emptyState('🧴','Sin items en el inventario','Agrega vendas, jeringas u otros insumos que tengas en casa')
+        ? emptyState('kit','Sin productos en el inventario','Agrega vendas, jeringas u otros insumos que tengas en casa','+ Agregar producto',"openBotiquinItemModal()")
         : `<div class="divide-y divide-gray-50">
              ${inventory.map(item => {
                const st = botiquinStatus(item);
                const isExpired = item.expiryDate && item.expiryDate < today;
                return `
                <div class="flex items-center gap-3 py-3">
-                 <div class="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-lg flex-shrink-0">🧴</div>
+                 <div class="w-9 h-9 rounded-xl bg-gray-50 flex items-center justify-center text-gray-500 flex-shrink-0">${icon('kit','w-4.5 h-4.5')}</div>
                  <div class="flex-1 min-w-0">
                    <div class="flex items-center gap-2 flex-wrap">
                      <span class="font-medium text-gray-900 text-sm">${item.name}</span>
@@ -3398,35 +3466,36 @@ function viewBotiquin() {
                    </div>
                    <div class="text-xs mt-0.5 text-gray-400">
                      ${item.quantity ?? 0} ${item.unit||''}
-                     ${item.expiryDate ? ` · <span class="${isExpired?'text-red-500':'text-gray-400'}">${isExpired?'⚠️ Venció':'Vence'} ${formatDate(item.expiryDate)}</span>` : ''}
+                     ${item.expiryDate ? ` · <span class="${isExpired?'text-red-500':'text-gray-400'}">${isExpired?'Venció':'Vence'} ${formatDate(item.expiryDate)}</span>` : ''}
                    </div>
                  </div>
                  <div class="flex items-center gap-1 flex-shrink-0">
                    <button onclick="openBotiquinItemModal('${item.id}')" title="Editar"
                      class="w-8 h-8 rounded-lg text-gray-400 hover:text-brand-600 hover:bg-brand-50 flex items-center justify-center transition-colors">
-                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"/></svg>
+                     ${icon('pencil','w-3.5 h-3.5')}
                    </button>
                    <button onclick="deleteBotiquinItem('${item.id}')" title="Eliminar"
                      class="w-8 h-8 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 flex items-center justify-center transition-colors">
-                     <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                     ${icon('trash','w-3.5 h-3.5')}
                    </button>
                  </div>
                </div>`;
              }).join('')}
            </div>`}
-    </div>
+    </div>`;
 
+  const treatmentsPanel = `
     ${pets.length > 0 ? `
     <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6 stagger">
-      ${statCard('💊','Total', allMeds.length, 'brand')}
-      ${statCard('✅','Activos', active.length, 'teal')}
-      ${statCard('⚠️','Stock bajo', lowStock.length, 'amber')}
-      ${statCard('📅','Por vencer (30d)', expiringSoon.length, 'red')}
+      ${statCard(icon('pill','w-5 h-5 md:w-6 md:h-6'),'Total', allMeds.length, 'brand')}
+      ${statCard(icon('checkCircle','w-5 h-5 md:w-6 md:h-6'),'Activos', active.length, 'teal')}
+      ${statCard(icon('warning','w-5 h-5 md:w-6 md:h-6'),'Stock bajo', lowStock.length, 'amber')}
+      ${statCard(icon('calendar','w-5 h-5 md:w-6 md:h-6'),'Por vencer (30d)', expiringSoon.length, 'red')}
     </div>` : ''}
 
     ${expiringSoon.length > 0 ? `
     <div class="bg-amber-50 border border-amber-100 rounded-2xl p-4 mb-6">
-      <h3 class="font-semibold text-amber-700 mb-2 text-sm">⚠️ Próximos a vencer (30 días)</h3>
+      <h3 class="font-semibold text-amber-700 mb-2 text-sm flex items-center gap-1.5">${icon('warning','w-4 h-4')} Próximos a vencer (30 días)</h3>
       <div class="flex gap-2 overflow-x-auto pb-1 -mb-1" style="scrollbar-width:none">
         ${expiringSoon.map(m => `
           <div class="bg-white rounded-xl px-3 py-2 text-sm border border-amber-200 flex items-center gap-2 flex-shrink-0">
@@ -3439,7 +3508,7 @@ function viewBotiquin() {
 
     <div class="bg-white rounded-2xl shadow-sm p-5">
       <div class="flex items-center justify-between mb-4 flex-wrap gap-3">
-        <h3 class="font-semibold text-gray-700">Tratamientos activos por mascota</h3>
+        <p class="text-xs text-gray-400">Tratamientos activos por mascota</p>
         <div class="flex items-center gap-2 flex-wrap">
           ${pets.length === 0 ? `
           <select disabled title="Registra una mascota para filtrar" class="input-field text-sm py-1.5 w-auto text-gray-400 bg-gray-50 cursor-not-allowed">
@@ -3460,16 +3529,16 @@ function viewBotiquin() {
 
       ${(() => {
         const { items: dispPage, total: dispTotal, pages: dispPages, page: dispPage_ } = paginate(displayed, 'botiquin');
-        if (pets.length === 0) return emptyState('🐾','Sin mascotas registradas','Registra tu primera mascota para empezar a llevar sus tratamientos','+ Registrar mascota',"navigate('addPet')");
+        if (pets.length === 0) return emptyState('paw','Sin mascotas registradas','Registra tu primera mascota para empezar a llevar sus tratamientos','+ Registrar mascota',"navigate('addPet')");
         return dispTotal === 0
-          ? emptyState('💊','Sin medicamentos','Agrega tratamientos desde el perfil de cada mascota')
+          ? emptyState('pill','Sin medicamentos','Agrega tratamientos desde el perfil de cada mascota')
           : `<div class="divide-y divide-gray-50">
                ${dispPage.map(m => {
                const isExpired     = m.expiry && m.expiry < today;
                const isExpiringSoon = m.expiry && !isExpired && m.expiry <= daysFromNowStr(30);
                return `
                <div class="flex items-center gap-3 py-3">
-                 <div class="w-9 h-9 rounded-xl ${m.active?'bg-brand-50':'bg-gray-50'} flex items-center justify-center text-lg flex-shrink-0">💊</div>
+                 <div class="w-9 h-9 rounded-xl ${m.active?'bg-brand-50 text-brand-600':'bg-gray-50 text-gray-400'} flex items-center justify-center flex-shrink-0">${icon('pill','w-4.5 h-4.5')}</div>
                  <div class="flex-1 min-w-0">
                    <div class="flex items-center gap-2 flex-wrap">
                      <span class="font-medium text-gray-900 text-sm">${m.name}</span>
@@ -3477,7 +3546,7 @@ function viewBotiquin() {
                      ${m.active ? '<span class="badge bg-green-100 text-green-700 text-xs">Activo</span>' : '<span class="badge bg-gray-100 text-gray-400 text-xs">Finalizado</span>'}
                    </div>
                    <div class="text-xs mt-0.5 ${isExpired?'text-red-500':isExpiringSoon?'text-amber-500':'text-gray-400'}">
-                     ${m.expiry ? `${isExpired?'⚠️ Venció':'📅 Vence'}: ${formatDate(m.expiry)}` : '<span class="text-gray-300">Sin vencimiento</span>'}
+                     ${m.expiry ? `${isExpired?'Venció':'Vence'}: ${formatDate(m.expiry)}` : '<span class="text-gray-300">Sin vencimiento</span>'}
                    </div>
                  </div>
                  <button onclick="openPet('${m.petId}');setTab('medicamentos')"
@@ -3487,7 +3556,21 @@ function viewBotiquin() {
              </div>
              ${pagerHTML('botiquin', dispPages, dispPage_)}`;
       })()}
+    </div>`;
+
+  return appShell(`
+    ${pageHeader('Botiquín', 'Inventario del hogar y medicamentos de todas tus mascotas')}
+
+    <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
+      <button onclick="state.botiquinTab='inventario';render()" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${botTab==='inventario'?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700'}">
+        ${icon('kit','w-4 h-4')} Inventario
+      </button>
+      <button onclick="state.botiquinTab='tratamientos';render()" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 ${botTab==='tratamientos'?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700'}">
+        ${icon('pill','w-4 h-4')} Tratamientos
+      </button>
     </div>
+
+    ${botTab === 'inventario' ? inventoryPanel : treatmentsPanel}
   `);
 }
 
@@ -3497,7 +3580,7 @@ function openBotiquinItemModal(itemId) {
   const units = ['unidades','comprimidos','ml','mg','cajas','frascos'];
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">${item ? '✏️ Editar item' : '🧴 Agregar item al botiquín'}</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${item ? icon('pencil','w-5 h-5') : icon('kit','w-5 h-5')} ${item ? 'Editar producto' : 'Agregar producto al botiquín'}</h3>
       <form onsubmit="saveBotiquinItem(event${item ? `,'${item.id}'` : ''})" class="space-y-3">
         <div><label class="form-label">Nombre *</label><input id="bq-name" required value="${item?.name||''}" placeholder="Ej: Vendas elásticas" class="input-field" /></div>
         <div class="grid grid-cols-2 gap-3">
@@ -3556,7 +3639,7 @@ async function saveBotiquinItem(e, itemId) {
       quantity: data.quantity, unit: data.unit, expiryDate: data.expiry_date, notes: data.notes, status });
   }
   closeModal(); render();
-  showToast('Item guardado ✅', 'success');
+  showToast('Producto guardado', 'success');
 }
 
 async function deleteBotiquinItem(itemId) {
@@ -3602,7 +3685,7 @@ function tabSeguimiento(pet) {
     <!-- Gráfico de peso -->
     <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-gray-800">📈 Peso histórico</h3>
+        <h3 class="font-semibold text-gray-800 flex items-center gap-1.5">${icon('chartBar','w-4 h-4')} Peso histórico</h3>
         <button onclick="openWeightModal('${pet.id}')" class="btn-primary text-sm">+ Registrar peso</button>
       </div>
       ${hasWeight ? `
@@ -3610,7 +3693,7 @@ function tabSeguimiento(pet) {
         <div class="mt-2 text-xs text-gray-400 text-center">Últimas ${Math.min(history.length, 12)} mediciones</div>
       ` : `
         <div class="text-center py-6">
-          <div class="text-4xl mb-2">⚖️</div>
+          <div class="mb-2 flex justify-center text-gray-300">${icon('weight','w-10 h-10')}</div>
           <p class="text-sm text-gray-400">Sin registros de peso. ¡Añade el primero!</p>
         </div>
       `}
@@ -3619,7 +3702,7 @@ function tabSeguimiento(pet) {
     <!-- BCS -->
     <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-gray-800">🏋️ Índice condición corporal (BCS)</h3>
+        <h3 class="font-semibold text-gray-800 flex items-center gap-1.5">${icon('weight','w-4 h-4')} Índice condición corporal (BCS)</h3>
       </div>
       <div class="flex gap-2 flex-wrap mb-3">
         ${[1,2,3,4,5,6,7,8,9].map(n => `
@@ -3641,7 +3724,7 @@ function tabSeguimiento(pet) {
     <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
       <div class="flex items-center justify-between mb-3">
         <h3 class="font-semibold text-gray-800">😊 Estado de ánimo</h3>
-        <button onclick="openMoodModal('${pet.id}')" class="btn-primary text-sm">${todayMood ? '✏️ Editar hoy' : '+ Registrar hoy'}</button>
+        <button onclick="openMoodModal('${pet.id}')" class="btn-primary text-sm">${todayMood ? 'Editar hoy' : '+ Registrar hoy'}</button>
       </div>
       ${todayMood ? `
         <div class="flex items-center gap-2 mb-3 p-3 bg-gray-50 rounded-xl">
@@ -3670,11 +3753,11 @@ function tabSeguimiento(pet) {
     <!-- Síntomas -->
     <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-gray-800">🩺 Diario de síntomas</h3>
+        <h3 class="font-semibold text-gray-800 flex items-center gap-1.5">${icon('heart','w-4 h-4')} Diario de síntomas</h3>
         <button onclick="openSymptomsModal('${pet.id}')" class="btn-primary text-sm">+ Registrar</button>
       </div>
       ${symptomsLog.length === 0
-        ? `<div class="text-center py-4"><div class="text-3xl mb-2">🩺</div><p class="text-sm text-gray-400">Sin registros de síntomas</p></div>`
+        ? `<div class="text-center py-4"><div class="mb-2 flex justify-center text-gray-300">${icon('heart','w-8 h-8')}</div><p class="text-sm text-gray-400">Sin registros de síntomas</p></div>`
         : `<div class="space-y-2">
              ${[...symptomsLog].sort((a,b)=>b.date>a.date?1:-1).slice(0,5).map(s => `
                <div class="p-3 bg-gray-50 rounded-xl">
@@ -3713,18 +3796,18 @@ function tabNutricion(pet) {
   const recentActivities = activities.filter(a => a.date >= weekAgoStr).sort((a,b) => b.date>a.date?1:-1);
   const totalMinutes = recentActivities.reduce((s, a) => s + (parseInt(a.duration)||0), 0);
   const totalWalks = recentActivities.filter(a => a.type === 'Paseo').length;
-  const actTypeIcon = { Paseo:'🚶', Juego:'🎾', Ejercicio:'🏃', Natación:'🏊', Otro:'⚡' };
+  const actTypeIcon = { Paseo:'activity', Juego:'activity', Ejercicio:'activity', Natación:'activity', Otro:'bolt' };
 
   return `
   <div class="space-y-4">
     <!-- Alimentación -->
     <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-gray-800">🍽️ Registro de alimentación</h3>
+        <h3 class="font-semibold text-gray-800 flex items-center gap-1.5">${icon('food','w-4 h-4')} Registro de alimentación</h3>
         <button onclick="openMealModal('${pet.id}')" class="btn-primary text-sm">+ Registrar comida</button>
       </div>
       ${meals.length === 0
-        ? `<div class="text-center py-6"><div class="text-4xl mb-2">🍽️</div><p class="text-sm text-gray-400">Sin registros de alimentación</p></div>`
+        ? `<div class="text-center py-6"><div class="mb-2 flex justify-center text-gray-300">${icon('food','w-10 h-10')}</div><p class="text-sm text-gray-400">Sin registros de alimentación</p></div>`
         : recentMealDates.length === 0
           ? `<div class="text-center py-4"><p class="text-sm text-gray-400">Sin comidas registradas esta semana</p></div>`
           : `<div class="space-y-3">
@@ -3734,7 +3817,7 @@ function tabNutricion(pet) {
                    <div class="space-y-1.5">
                      ${mealsByDate[date].map(m => `
                        <div class="flex items-center gap-3 p-2.5 bg-gray-50 rounded-xl">
-                         <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center text-base">🍽️</div>
+                         <div class="w-8 h-8 bg-orange-50 rounded-lg flex items-center justify-center text-orange-500">${icon('food','w-4 h-4')}</div>
                          <div class="flex-1 min-w-0">
                            <span class="text-sm font-medium text-gray-800">${m.time} · ${m.type}</span>
                            <span class="text-xs text-gray-400 ml-2">${m.amount} ${m.unit}</span>
@@ -3749,7 +3832,7 @@ function tabNutricion(pet) {
     <!-- Actividad -->
     <div class="bg-white rounded-2xl shadow-sm p-4 md:p-5">
       <div class="flex items-center justify-between mb-3">
-        <h3 class="font-semibold text-gray-800">🏃 Registro de actividad</h3>
+        <h3 class="font-semibold text-gray-800 flex items-center gap-1.5">${icon('activity','w-4 h-4')} Registro de actividad</h3>
         <button onclick="openActivityModal('${pet.id}')" class="btn-primary text-sm">+ Registrar actividad</button>
       </div>
       ${recentActivities.length > 0 ? `
@@ -3764,11 +3847,11 @@ function tabNutricion(pet) {
           </div>
         </div>` : ''}
       ${activities.length === 0
-        ? `<div class="text-center py-6"><div class="text-4xl mb-2">🏃</div><p class="text-sm text-gray-400">Sin registros de actividad</p></div>`
+        ? `<div class="text-center py-6"><div class="mb-2 flex justify-center text-gray-300">${icon('activity','w-10 h-10')}</div><p class="text-sm text-gray-400">Sin registros de actividad</p></div>`
         : `<div class="space-y-2">
              ${[...activities].sort((a,b)=>b.date>a.date?1:-1).slice(0,7).map(a => `
                <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl">
-                 <div class="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center text-lg">${actTypeIcon[a.type]||'⚡'}</div>
+                 <div class="w-9 h-9 bg-teal-50 rounded-xl flex items-center justify-center text-teal-600">${icon(actTypeIcon[a.type]||'bolt','w-4.5 h-4.5')}</div>
                  <div class="flex-1 min-w-0">
                    <div class="flex items-center gap-2">
                      <span class="text-sm font-medium text-gray-800">${a.type}</span>
@@ -3831,7 +3914,7 @@ function openWeightModal(petId) {
   const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">⚖️ Registrar peso</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('weight','w-5 h-5')} Registrar peso</h3>
       <form onsubmit="saveWeight(event,'${petId}')" class="space-y-3">
         <div>
           <label class="form-label">Fecha *</label>
@@ -3949,7 +4032,7 @@ function openSymptomsModal(petId) {
   const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">🩺 Registrar síntomas</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('heart','w-5 h-5')} Registrar síntomas</h3>
       <div class="space-y-3">
         <div>
           <label class="form-label">Fecha *</label>
@@ -4011,7 +4094,7 @@ function openMealModal(petId) {
   const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">🍽️ Registrar comida</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('food','w-5 h-5')} Registrar comida</h3>
       <form onsubmit="saveMeal(event,'${petId}')" class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -4082,7 +4165,7 @@ function openActivityModal(petId) {
   const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">🏃 Registrar actividad</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('activity','w-5 h-5')} Registrar actividad</h3>
       <form onsubmit="saveActivity(event,'${petId}')" class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
           <div>
@@ -4153,7 +4236,7 @@ function exportPetRecord(petId) {
   openModal(`
     <div class="modal-box p-4 sm:p-6" id="export-record">
       <div class="flex items-center justify-between mb-4">
-        <h3 class="text-lg font-bold text-gray-900">📄 Expediente médico — ${pet.name}</h3>
+        <h3 class="text-lg font-bold text-gray-900 flex items-center gap-2">${icon('document','w-5 h-5')} Expediente médico — ${pet.name}</h3>
         <button onclick="closeModal()" class="w-8 h-8 rounded-lg text-gray-400 hover:text-gray-700 hover:bg-gray-100 flex items-center justify-center">✕</button>
       </div>
 
@@ -4171,8 +4254,8 @@ function exportPetRecord(petId) {
         <div class="mb-4">
           <h5 class="font-semibold text-gray-700 text-sm mb-2">Veterinario</h5>
           <p class="text-sm text-gray-600">${vet.name}${vet.clinic ? ` · ${vet.clinic}` : ''}</p>
-          ${vet.phone ? `<p class="text-xs text-gray-400">📞 ${vet.phone}</p>` : ''}
-          ${vet.email ? `<p class="text-xs text-gray-400">✉️ ${vet.email}</p>` : ''}
+          ${vet.phone ? `<p class="text-xs text-gray-400 flex items-center gap-1">${icon('phone','w-3 h-3')} ${vet.phone}</p>` : ''}
+          ${vet.email ? `<p class="text-xs text-gray-400 flex items-center gap-1">${icon('mail','w-3 h-3')} ${vet.email}</p>` : ''}
         </div>` : ''}
 
         ${activeVaccines.length ? `
@@ -4204,7 +4287,7 @@ function exportPetRecord(petId) {
 
       <div class="flex gap-3 pt-4 border-t border-gray-100 mt-4">
         <button onclick="closeModal()" class="btn-secondary flex-1">Cerrar</button>
-        <button onclick="window.print()" class="btn-primary flex-1">🖨️ Imprimir / Guardar PDF</button>
+        <button onclick="window.print()" class="btn-primary flex-1 flex items-center justify-center gap-1.5">${icon('printer','w-4 h-4')} Imprimir / Guardar PDF</button>
       </div>
     </div>`);
 }
@@ -4530,7 +4613,7 @@ function loadDemoAndLogin() {
 
   Object.assign(state, demoState);
   saveState();
-  showToast('✅ Datos de prueba cargados (3 años)', 'success');
+  showToast('Datos de prueba cargados (3 años)', 'success');
   navigate('dashboard', {}, { replace: true });
 }
 
@@ -4542,7 +4625,7 @@ function openEditVaccineModal(petId, vaccineId) {
   const vaccines = VACCINES_BY_SPECIES[pet.species] || VACCINES_BY_SPECIES['Otro'];
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar Vacuna</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('pencil','w-5 h-5')} Editar Vacuna</h3>
       <form onsubmit="saveEditVaccine(event,'${petId}','${vaccineId}')" class="space-y-3">
         <div>
           <label class="form-label">Vacuna *</label>
@@ -4599,7 +4682,7 @@ function openEditDewormModal(petId, dewormId) {
   if (!d) return;
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar Desparasitación</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('pencil','w-5 h-5')} Editar Desparasitación</h3>
       <form onsubmit="saveEditDeworming(event,'${petId}','${dewormId}')" class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
           <div><label class="form-label">Producto *</label><input id="edw-product" required value="${d.product||''}" class="input-field" /></div>
@@ -4653,7 +4736,7 @@ function openEditMedModal(petId, medId) {
   if (!m) return;
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar Tratamiento</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('pencil','w-5 h-5')} Editar Tratamiento</h3>
       <form onsubmit="saveEditMedication(event,'${petId}','${medId}')" class="space-y-3">
         <div><label class="form-label">Medicamento *</label><input id="em-name" required value="${m.name||''}" class="input-field" /></div>
         <div class="grid grid-cols-2 gap-3">
@@ -4722,7 +4805,7 @@ function openEditHistoryModal(petId, histId) {
   if (!h) return;
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-4">✏️ Editar evento clínico</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-4 flex items-center gap-2">${icon('pencil','w-5 h-5')} Editar evento clínico</h3>
       <form onsubmit="saveEditHistory(event,'${petId}','${histId}')" class="space-y-3">
         <div class="grid grid-cols-2 gap-3">
           <div class="col-span-2"><label class="form-label">Título *</label><input id="eh-title" required value="${h.title||''}" class="input-field" /></div>
@@ -4743,13 +4826,13 @@ function openEditHistoryModal(petId, histId) {
           <div class="flex flex-wrap gap-2 mt-1">
             ${h.files.map((f,fi) => `
               <div class="flex items-center gap-1 px-2 py-1 bg-gray-50 border border-gray-200 rounded-lg text-xs text-gray-600">
-                📎 ${f.name}
+                ${icon('paperclip','w-3 h-3 inline align-text-bottom')} ${f.name}
                 <button type="button" onclick="removeHistoryFile('${petId}','${histId}',${fi})" class="ml-1 text-red-400 hover:text-red-600">✕</button>
               </div>`).join('')}
           </div>
         </div>` : ''}
         <div>
-          <label class="form-label">📎 Agregar más archivos</label>
+          <label class="form-label flex items-center gap-1">${icon('paperclip','w-3.5 h-3.5')} Agregar más archivos</label>
           <div onclick="document.getElementById('eh-files').click()"
             class="mt-1 border-2 border-dashed border-gray-200 rounded-xl p-3 text-center cursor-pointer hover:border-brand-300 hover:bg-brand-50 transition-colors">
             <p class="text-xs text-gray-400">Haz clic para seleccionar archivos</p>
@@ -4772,7 +4855,7 @@ function previewHistoryFilesEdit(input) {
   Array.from(input.files).forEach(file => {
     const el = document.createElement('div');
     el.className = 'flex items-center gap-1.5 px-2 py-1 bg-brand-50 border border-brand-100 rounded-lg text-xs text-brand-700';
-    el.textContent = `📎 ${file.name}`;
+    el.textContent = `${file.name}`;
     preview.appendChild(el);
   });
 }
@@ -4816,7 +4899,7 @@ function openInviteTutor2Modal(petId) {
   if (!pet) return;
   openModal(`
     <div class="modal-box p-4 sm:p-6">
-      <h3 class="text-lg font-bold text-gray-900 mb-2">👥 Invitar Segundo Tutor</h3>
+      <h3 class="text-lg font-bold text-gray-900 mb-2 flex items-center gap-2">${icon('users','w-5 h-5')} Invitar Segundo Tutor</h3>
       <p class="text-sm text-gray-500 mb-4">El invitado recibirá un correo para crear su cuenta y acceder a <strong>${pet.name}</strong>.</p>
       <form onsubmit="sendTutor2Invite(event,'${petId}')" class="space-y-3">
         <div><label class="form-label">Nombre del tutor *</label><input id="t2-inv-name" required placeholder="Nombre completo" class="input-field" /></div>
@@ -4829,7 +4912,7 @@ function openInviteTutor2Modal(petId) {
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
-          <button type="submit" class="btn-primary flex-1">📧 Enviar invitación</button>
+          <button type="submit" class="btn-primary flex-1 flex items-center justify-center gap-1.5">${icon('mail','w-4 h-4')} Enviar invitación</button>
         </div>
       </form>
     </div>`);
@@ -4842,7 +4925,7 @@ function openInviteTutor2Modal(petId) {
 async function createPetInvite(pet, { name, email, role }) {
   if (isDemoUser()) {
     pet.tutor2 = { name, email, role, pending: true };
-    showToast(`✅ Invitación simulada para ${email} (modo demo)`, 'success');
+    showToast(`Invitación simulada para ${email} (modo demo)`, 'success');
     return true;
   }
   const token = genId() + genId();
@@ -4864,7 +4947,7 @@ async function createPetInvite(pet, { name, email, role }) {
   });
   if (error) { showToast('Error al enviar el correo de invitación', 'error'); console.error(error); return false; }
   pet.tutor2 = { name, email, role, pending: true };
-  showToast(`✅ Invitación enviada a ${email}`, 'success');
+  showToast(`Invitación enviada a ${email}`, 'success');
   return true;
 }
 
@@ -4955,22 +5038,22 @@ function viewAdmin() {
 
   const tab = state.adminTab || 'dashboard';
   const tabs = [
-    { id:'dashboard', label:'📊 Dashboard' },
-    { id:'usuarios',  label:'👥 Usuarios' },
-    { id:'planes',    label:'💳 Planes' },
+    { id:'dashboard', label:'Dashboard', iconName:'chartBar' },
+    { id:'usuarios',  label:'Usuarios',  iconName:'users' },
+    { id:'planes',    label:'Planes',    iconName:'creditCard' },
   ];
 
   const tabContent = () => {
     if (tab === 'dashboard') return `
       <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        ${statCard('👥', 'Usuarios', totalUsers, 'brand')}
-        ${statCard('🐾', 'Mascotas', totalPets, 'teal')}
-        ${statCard('💳', 'Usuarios pagos', paidUsers, 'amber')}
-        ${statCard('🆓', 'Plan Free', totalUsers - paidUsers, 'red')}
+        ${statCard(icon('users','w-5 h-5 md:w-6 md:h-6'), 'Usuarios', totalUsers, 'brand')}
+        ${statCard(icon('paw','w-5 h-5 md:w-6 md:h-6'), 'Mascotas', totalPets, 'teal')}
+        ${statCard(icon('creditCard','w-5 h-5 md:w-6 md:h-6'), 'Usuarios pagos', paidUsers, 'amber')}
+        ${statCard(icon('box','w-5 h-5 md:w-6 md:h-6'), 'Plan Free', totalUsers - paidUsers, 'red')}
       </div>
       <div class="grid md:grid-cols-2 gap-6 mb-6">
         <div class="bg-white rounded-2xl shadow-sm p-5">
-          <h3 class="font-semibold text-gray-800 mb-4">💳 Distribución de planes</h3>
+          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-1.5">${icon('creditCard','w-4 h-4')} Distribución de planes</h3>
           <div class="space-y-3">
             ${[['free','Free',totalUsers-paidUsers,'bg-gray-400'],['basic','Basic',basicUsers,'bg-blue-500'],['pro','Pro',proUsers,'bg-brand-500'],['clinic','Clínica',clinicUsers,'bg-amber-500']].map(([_,label,n,color]) => {
               const pct = totalUsers > 0 ? Math.round(n/totalUsers*100) : 0;
@@ -4979,7 +5062,7 @@ function viewAdmin() {
           </div>
         </div>
         <div class="bg-white rounded-2xl shadow-sm p-5">
-          <h3 class="font-semibold text-gray-800 mb-4">🐾 Mascotas por especie</h3>
+          <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-1.5">${icon('paw','w-4 h-4')} Mascotas por especie</h3>
           <div class="space-y-2">
             ${Object.entries(speciesDist).length === 0
               ? '<p class="text-sm text-gray-400 text-center py-6">Sin mascotas registradas</p>'
@@ -4991,7 +5074,7 @@ function viewAdmin() {
         </div>
       </div>
       <div class="bg-white rounded-2xl shadow-sm p-5">
-        <h3 class="font-semibold text-gray-800 mb-4">📈 Registros últimos 7 días</h3>
+        <h3 class="font-semibold text-gray-800 mb-4 flex items-center gap-1.5">${icon('chartBar','w-4 h-4')} Registros últimos 7 días</h3>
         <div class="flex items-end gap-2 h-24">
           ${signupsByDay.map((n, i) => {
             const max = Math.max(...signupsByDay, 1);
@@ -5051,9 +5134,9 @@ function viewAdmin() {
 
   return appShell(`
     <div class="max-w-5xl mx-auto">
-      ${pageHeader('Panel Administrador ⚙️', 'Command Center · MyPets SaaS')}
+      ${pageHeader('Panel Administrador', 'Command Center · MyPets SaaS')}
       <div class="flex gap-1 bg-gray-100 rounded-xl p-1 mb-6 w-fit">
-        ${tabs.map(t => '<button onclick="state.adminTab=\''+t.id+'\';render()" class="px-4 py-2 rounded-lg text-sm font-medium transition-all '+(tab===t.id?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700')+'">'+t.label+'</button>').join('')}
+        ${tabs.map(t => '<button onclick="state.adminTab=\''+t.id+'\';render()" class="px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-1.5 '+(tab===t.id?'bg-white text-gray-900 shadow-sm':'text-gray-500 hover:text-gray-700')+'">'+icon(t.iconName,'w-4 h-4')+t.label+'</button>').join('')}
       </div>
       ${tabContent()}
     </div>
@@ -5078,7 +5161,7 @@ async function applyPlanChange(userId) {
   const profile = (state.adminData?.profiles||[]).find(p=>p.id===userId);
   if (profile) profile.plan = plan;
   closeModal();
-  showToast('Plan actualizado ✅', 'success');
+  showToast('Plan actualizado', 'success');
   render();
 }
 // ---- INIT ----
