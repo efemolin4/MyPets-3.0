@@ -100,7 +100,9 @@ function loadState() {
       const p = JSON.parse(s);
       state.user = p.user || null;
       state.isLoggedIn = p.isLoggedIn || false;
-      state.currentView = p.isLoggedIn ? 'dashboard' : 'login';
+      const route = resolveInitialViewFromUrl(state.isLoggedIn);
+      if (route) { state.currentView = route.view; Object.assign(state, route.params || {}); }
+      else state.currentView = state.isLoggedIn ? 'dashboard' : 'login';
       state.currentTab = 'general'; state.addPetStep = 1; state.newPetData = {};
     }
     // Un link de invitación de segundo tutor llega como ?invite=TOKEN — el login real
@@ -266,6 +268,21 @@ function formatDate(d) {
   return dt.toLocaleDateString('es-CL', { day:'2-digit', month:'2-digit', year:'numeric' });
 }
 
+// "Hoy" en fecha LOCAL (YYYY-MM-DD), no en UTC. `new Date().toISOString()` usa UTC,
+// así que en Chile (UTC-4/-3) desde ~las 20:00 hasta medianoche ya reporta el día
+// siguiente — rompía vencimientos, calendario, eventos próximos y alertas.
+function todayStr() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+// Fecha local, N días desde hoy (para umbrales tipo "vence en 30 días").
+function daysFromNowStr(days) {
+  const d = new Date(todayStr() + 'T12:00:00');
+  d.setDate(d.getDate() + days);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 function addMonths(dateStr, months) {
   if (!dateStr || !months) return '';
   const d = new Date(dateStr + 'T12:00:00');
@@ -291,12 +308,14 @@ function getAge(dob) {
 // nunca usados) en un estado de 3 niveles: vencido / próximo / al día.
 function careAlertStatus(nextDate, alertType, alertDays) {
   if (!nextDate) return { status: 'sin_fecha', label: '', color: 'text-gray-400', badge: 'bg-gray-100 text-gray-500' };
-  const todayStr = new Date().toISOString().slice(0, 10);
-  if (nextDate < todayStr) return { status: 'vencido', label: 'Vencido', color: 'text-red-500', badge: 'bg-red-100 text-red-600' };
+  const today = todayStr();
+  if (nextDate < today) return { status: 'vencido', label: 'Vencido', color: 'text-red-500', badge: 'bg-red-100 text-red-600' };
   const windowDays = alertType === 'week' ? 7 : alertType === 'custom' ? (parseInt(alertDays) || 0) : 0;
-  const thresholdStr = new Date(Date.now() + windowDays * 86400000).toISOString().slice(0, 10);
+  const thresholdDate = new Date(today + 'T12:00:00');
+  thresholdDate.setDate(thresholdDate.getDate() + windowDays);
+  const thresholdStr = `${thresholdDate.getFullYear()}-${String(thresholdDate.getMonth() + 1).padStart(2, '0')}-${String(thresholdDate.getDate()).padStart(2, '0')}`;
   if (nextDate <= thresholdStr) {
-    const daysLeft = Math.round((new Date(nextDate + 'T12:00:00') - new Date(todayStr + 'T12:00:00')) / 86400000);
+    const daysLeft = Math.round((new Date(nextDate + 'T12:00:00') - new Date(today + 'T12:00:00')) / 86400000);
     return { status: 'proximo', label: daysLeft <= 0 ? 'Vence hoy' : `Vence en ${daysLeft} día${daysLeft !== 1 ? 's' : ''}`, color: 'text-amber-500', badge: 'bg-amber-100 text-amber-600' };
   }
   return { status: 'al_dia', label: 'Al día', color: 'text-green-600', badge: 'bg-green-100 text-green-700' };
@@ -318,12 +337,67 @@ function fmtCLP(n) {
 }
 
 // ---- ROUTER ----
-function navigate(view, params = {}) {
+// Rutas reales: la URL refleja la vista actual, el botón atrás/adelante del
+// navegador funciona, y recargar la página no te manda siempre al dashboard.
+// Requiere que el hosting reescriba cualquier path a index.html (ver vercel.json)
+// ya que esto es una SPA de un solo archivo, sin páginas reales en el servidor.
+const ROUTE_PATHS = {
+  login: '/login', register: '/register', forgot: '/forgot', resetPassword: '/reset-password',
+  dashboard: '/', pets: '/pets', addPet: '/pets/nueva',
+  calendar: '/calendar', finance: '/finanzas', botiquin: '/botiquin', admin: '/admin',
+};
+const AUTH_VIEWS = ['login', 'register', 'forgot', 'resetPassword'];
+
+function viewToPath(view, params = {}) {
+  if (view === 'petProfile') {
+    const id = params.currentPetId || state.currentPetId;
+    return id ? `/pets/${encodeURIComponent(id)}` : '/pets';
+  }
+  return ROUTE_PATHS[view] || '/';
+}
+
+function pathToView(pathname) {
+  const petMatch = pathname.match(/^\/pets\/([^/]+)\/?$/);
+  if (petMatch && petMatch[1] !== 'nueva') {
+    return { view: 'petProfile', params: { currentPetId: decodeURIComponent(petMatch[1]), currentTab: 'general' } };
+  }
+  for (const [view, path] of Object.entries(ROUTE_PATHS)) {
+    if (path === pathname) return { view };
+  }
+  return null;
+}
+
+// Deep-link inicial (carga directa o recarga): solo se respeta si calza con el
+// estado de sesión — un usuario logueado no debería aterrizar en /login, y uno
+// sin sesión no puede saltar directo a una vista protegida.
+function resolveInitialViewFromUrl(loggedIn) {
+  const route = pathToView(location.pathname);
+  if (!route) return null;
+  const isAuthView = AUTH_VIEWS.includes(route.view);
+  if (loggedIn && isAuthView) return null;
+  if (!loggedIn && !isAuthView) return null;
+  return route;
+}
+
+function navigate(view, params = {}, opts = {}) {
   if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
   Object.assign(state, { currentView: view, ...params });
+  const path = viewToPath(view, params);
+  if (location.pathname !== path) {
+    if (opts.replace) history.replaceState(null, '', path);
+    else history.pushState(null, '', path);
+  }
   render();
   window.scrollTo(0, 0);
 }
+
+window.addEventListener('popstate', () => {
+  const route = pathToView(location.pathname);
+  if (!route) return;
+  if (chartInstance) { chartInstance.destroy(); chartInstance = null; }
+  Object.assign(state, { currentView: route.view, ...(route.params || {}) });
+  render();
+});
 
 // ---- COMPONENTES ----
 function iconSVG(name) {
@@ -399,15 +473,14 @@ function bottomNav() {
       ${items.map(i => {
         const active = state.currentView === i.v;
         return `
-        <button onclick="navigate('${i.v}')" class="flex-1 flex flex-col items-center gap-0.5 pt-2 pb-1.5 transition-colors ${active?'text-brand-600':'text-gray-400'}">
+        <button onclick="navigate('${i.v}')" class="relative flex-1 flex flex-col items-center gap-0.5 pt-2 pb-1.5 transition-colors ${active?'text-brand-600':'text-gray-400'}">
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">${iconSVG(i.icon)}</svg>
           <span class="text-[10px] font-medium">${i.label}</span>
           ${active?`<span class="absolute bottom-0 w-8 h-0.5 rounded-full bg-brand-500 mb-0.5"></span>`:''}
         </button>`;
       }).join('')}
     </div>
-  </nav>`
-  .replace('class="flex-1', 'class="relative flex-1');
+  </nav>`;
 }
 
 function appShell(content) {
@@ -631,7 +704,7 @@ function viewForgot() {
 // ---- VISTA: DASHBOARD ----
 function viewDashboard() {
   const pets = state.pets;
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   const alerts = pets.flatMap(p => [
     ...(p.vaccines || []).filter(v => v.nextDate && careAlertStatus(v.nextDate, v.alertType, v.alertDays).status !== 'al_dia')
       .map(v => ({ ...v, icon: '💉', status: careAlertStatus(v.nextDate, v.alertType, v.alertDays) })),
@@ -1369,7 +1442,7 @@ function tabDeworming(pet) {
 function tabMedications(pet) {
   const allMs = [...(pet.medications||[])].reverse();
   const { items: ms, total, pages, page } = paginate(allMs, `med_${pet.id}`);
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayStr();
   const reminderLabels = { exact:'Horario exacto', '15':'15 min antes', '30':'30 min antes', '60':'60 min antes' };
   const hasActive = (pet.medications||[]).some(m => m.active);
   const doseGivenToday = (pet.doseLog||[]).some(dl => dl.date === today && dl.given);
@@ -1392,7 +1465,7 @@ function tabMedications(pet) {
         : `<div class="space-y-3">
              ${ms.map(m => {
                const isExpired  = m.expiry && m.expiry < today;
-               const expiringSoon = m.expiry && !isExpired && m.expiry <= new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+               const expiringSoon = m.expiry && !isExpired && m.expiry <= daysFromNowStr(30);
                const reminderLabel = reminderLabels[m.reminder] || m.reminder;
                return `
                <div class="border border-gray-100 rounded-2xl p-4 hover:border-brand-200 transition-colors">
@@ -2029,7 +2102,7 @@ function openDewormModal(petId) {
 }
 
 function openMedModal(petId) {
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <div class="flex items-center gap-2 mb-1">
@@ -2244,7 +2317,7 @@ function openExpenseModal() {
         <div><label class="form-label">Descripción *</label><input id="ex-desc" required placeholder="Ej: Consulta veterinaria" class="input-field" /></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="form-label">Monto (CLP) *</label><input id="ex-amount" type="number" required min="0" placeholder="0" class="input-field" /></div>
-          <div><label class="form-label">Fecha *</label><input id="ex-date" type="date" required value="${new Date().toISOString().slice(0,10)}" class="input-field" /></div>
+          <div><label class="form-label">Fecha *</label><input id="ex-date" type="date" required value="${todayStr()}" class="input-field" /></div>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="form-label">Categoría</label>
@@ -2369,9 +2442,11 @@ async function login() {
   state.user = { name: userName, email, id: data.user.id };
   state.isLoggedIn = true;
   saveState();
+  // Backfill silencioso para cuentas creadas antes de que profiles guardara el email
+  await sb.from('profiles').update({ email }).eq('id', data.user.id).is('email', null);
   await loadDataFromSupabase();
   showToast('¡Bienvenido! 👋', 'success');
-  navigate('dashboard');
+  navigate('dashboard', {}, { replace: true });
 }
 
 async function handleRegister(e) {
@@ -2403,9 +2478,12 @@ async function register() {
   state.isLoggedIn = true;
   state.pets = []; state.events = []; state.expenses = [];
   saveState();
+  // profiles no guarda el email por defecto (vive en auth.users) — lo copiamos a
+  // la propia fila para que el panel de admin pueda mostrarlo sin acceso a auth.users.
+  if (data.user?.id) await sb.from('profiles').update({ email }).eq('id', data.user.id);
   await loadDataFromSupabase();
   showToast('¡Cuenta creada! Bienvenido 🎉', 'success');
-  navigate('dashboard');
+  navigate('dashboard', {}, { replace: true });
 }
 
 async function handleForgot() {
@@ -2431,6 +2509,7 @@ async function logout() {
     addPetStep: 1, newPetData: {}, pages: {} };
   Object.assign(state, fresh);
   localStorage.removeItem('mypets_v3');
+  history.replaceState(null, '', ROUTE_PATHS.login);
   render();
 }
 
@@ -2747,7 +2826,7 @@ async function deleteMedication(petId, mId) {
 async function markDoseTaken(petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayStr();
   const activeMed = (pet.medications||[]).find(m => m.active);
   pet.doseLog = pet.doseLog || [];
   if (pet.doseLog.some(dl => dl.date === today && dl.given)) return;
@@ -3188,9 +3267,9 @@ function medStockStatus(m) {
 function viewBotiquin() {
   const pets = state.pets;
   const allMeds = pets.flatMap(p => (p.medications||[]).map(m => ({ ...m, petName: p.name, petId: p.id })));
-  const today = new Date().toISOString().slice(0,10);
+  const today = todayStr();
   const active = allMeds.filter(m => m.active);
-  const expiringSoon = allMeds.filter(m => m.expiry && m.expiry <= new Date(Date.now()+30*86400000).toISOString().slice(0,10));
+  const expiringSoon = allMeds.filter(m => m.expiry && m.expiry <= daysFromNowStr(30));
   const lowStock = allMeds.filter(m => { const ms = medStockStatus(m); return ms && ms.level !== 'ok'; });
   const filterPet = state.botiquinFilter || '';
   const filterStatus = state.botiquinStatus || '';
@@ -3202,7 +3281,7 @@ function viewBotiquin() {
   const inventory = state.botiquin || [];
   const statusLabel = { disponible: 'Disponible', por_agotarse: 'Por agotarse', agotado: 'Agotado' };
   const statusColor = { disponible: 'bg-green-100 text-green-700', por_agotarse: 'bg-amber-100 text-amber-700', agotado: 'bg-red-100 text-red-600' };
-  const invExpiringSoon = inventory.filter(i => i.expiryDate && i.expiryDate <= new Date(Date.now()+30*86400000).toISOString().slice(0,10));
+  const invExpiringSoon = inventory.filter(i => i.expiryDate && i.expiryDate <= daysFromNowStr(30));
   const invLowStock = inventory.filter(i => botiquinStatus(i) !== 'disponible');
 
   return appShell(`
@@ -3300,7 +3379,7 @@ function viewBotiquin() {
           : `<div class="divide-y divide-gray-50">
                ${dispPage.map(m => {
                const isExpired     = m.expiry && m.expiry < today;
-               const isExpiringSoon = m.expiry && !isExpired && m.expiry <= new Date(Date.now()+30*86400000).toISOString().slice(0,10);
+               const isExpiringSoon = m.expiry && !isExpired && m.expiry <= daysFromNowStr(30);
                return `
                <div class="flex items-center gap-3 py-3">
                  <div class="w-9 h-9 rounded-xl ${m.active?'bg-brand-50':'bg-gray-50'} flex items-center justify-center text-lg flex-shrink-0">💊</div>
@@ -3401,7 +3480,7 @@ async function deleteBotiquinItem(itemId) {
 
 // ---- TAB: SEGUIMIENTO ----
 function tabSeguimiento(pet) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   const history = pet.weightHistory || [];
   const moodLog = pet.moodLog || [];
   const symptomsLog = pet.symptomsLog || [];
@@ -3527,7 +3606,7 @@ function tabSeguimiento(pet) {
 function tabNutricion(pet) {
   const meals = pet.meals || [];
   const activities = pet.activities || [];
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
 
   // Last 7 days for meals
   const last7MealDays = [];
@@ -3662,7 +3741,7 @@ function setBCS(petId, score) {
 
 // ---- MODAL: Peso ----
 function openWeightModal(petId) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">⚖️ Registrar peso</h3>
@@ -3710,7 +3789,7 @@ async function saveWeight(e, petId) {
 
 // ---- MODAL: Mood ----
 function openMoodModal(petId) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   const pet = state.pets.find(p => p.id === petId);
   const existing = (pet?.moodLog || []).find(m => m.date === today);
   openModal(`
@@ -3756,7 +3835,7 @@ async function saveMood(petId) {
   const mood = document.getElementById('mood-val')?.value;
   if (!mood) { showToast('Selecciona un estado de ánimo', 'error'); return; }
   const notes = document.getElementById('mood-notes')?.value || '';
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   // Remove existing entry for today if any, then insert new one
   const existing = (pet.moodLog || []).find(m => m.date === today);
   pet.moodLog = (pet.moodLog || []).filter(m => m.date !== today);
@@ -3780,7 +3859,7 @@ async function saveMood(petId) {
 const SYMPTOM_TAGS = ['Vómito','Diarrea','Sin apetito','Letargo','Tos','Estornudos','Cojera','Rascado','Otros'];
 
 function openSymptomsModal(petId) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">🩺 Registrar síntomas</h3>
@@ -3842,7 +3921,7 @@ async function saveSymptoms(petId) {
 
 // ---- MODAL: Comida ----
 function openMealModal(petId) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">🍽️ Registrar comida</h3>
@@ -3913,7 +3992,7 @@ async function saveMeal(e, petId) {
 
 // ---- MODAL: Actividad ----
 function openActivityModal(petId) {
-  const today = new Date().toISOString().slice(0, 10);
+  const today = todayStr();
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">🏃 Registrar actividad</h3>
@@ -3979,7 +4058,7 @@ async function saveActivity(e, petId) {
 function exportPetRecord(petId) {
   const pet = state.pets.find(p => p.id === petId);
   if (!pet) return;
-  const activeVaccines = (pet.vaccines || []).filter(v => v.nextDate && v.nextDate >= new Date().toISOString().slice(0,10)).slice(0,5);
+  const activeVaccines = (pet.vaccines || []).filter(v => v.nextDate && v.nextDate >= todayStr()).slice(0,5);
   const activeMeds = (pet.medications || []).filter(m => m.active).slice(0,5);
   const lastHistory = [...(pet.clinicalHistory || [])].sort((a,b)=>b.date>a.date?1:-1).slice(0,5);
   const vet = pet.vet || {};
@@ -4047,7 +4126,8 @@ function exportPetRecord(petId) {
 function render() {
   const app = document.getElementById('app');
   const v = state.currentView;
-  if (!state.isLoggedIn && !['login','register','forgot','resetPassword'].includes(v)) { navigate('login'); return; }
+  if (!state.isLoggedIn && !AUTH_VIEWS.includes(v)) { navigate('login', {}, { replace: true }); return; }
+  if (state.isLoggedIn && AUTH_VIEWS.includes(v)) { navigate('dashboard', {}, { replace: true }); return; }
   if      (v === 'login')         app.innerHTML = viewLogin();
   else if (v === 'register')      app.innerHTML = viewRegister();
   else if (v === 'forgot')        app.innerHTML = viewForgot();
@@ -4059,8 +4139,8 @@ function render() {
   else if (v === 'calendar')      app.innerHTML = viewCalendar();
   else if (v === 'finance')       app.innerHTML = viewFinance();
   else if (v === 'botiquin')      app.innerHTML = viewBotiquin();
-  else if (v === 'admin')        { if (state.user?.isAdmin) { loadAdminData().then(() => { app.innerHTML = viewAdmin(); }); } else navigate('dashboard'); }
-  else navigate('dashboard');
+  else if (v === 'admin')        { if (state.user?.isAdmin) { loadAdminData().then(() => { app.innerHTML = viewAdmin(); }); } else navigate('dashboard', {}, { replace: true }); }
+  else navigate('dashboard', {}, { replace: true });
 }
 
 // ---- DATOS DE PRUEBA ----
@@ -4364,7 +4444,7 @@ function loadDemoAndLogin() {
   Object.assign(state, demoState);
   saveState();
   showToast('✅ Datos de prueba cargados (3 años)', 'success');
-  navigate('dashboard');
+  navigate('dashboard', {}, { replace: true });
 }
 
 // ---- EDITAR VACUNA ----
@@ -4751,7 +4831,7 @@ async function removeTutor2(petId) {
 
 // ---- VISTA ADMINISTRADOR ----
 function viewAdmin() {
-  if (!state.user?.isAdmin) { navigate('dashboard'); return ''; }
+  if (!state.user?.isAdmin) { navigate('dashboard', {}, { replace: true }); return ''; }
   const ad = state.adminData || { profiles: [], pets: [] };
   const profiles = ad.profiles;
   const allPets  = ad.pets;
@@ -4773,11 +4853,18 @@ function viewAdmin() {
 
   const speciesDist = allPets.reduce((acc, p) => { acc[p.species] = (acc[p.species]||0)+1; return acc; }, {});
 
+  // Bucketea por día CALENDARIO LOCAL, no por día UTC: created_at llega de Supabase
+  // como timestamp UTC, así que comparar con startsWith() contra una fecha UTC
+  // clasificaba mal los registros nocturnos (ej: 21:00 en Chile ya es "mañana" en UTC).
+  const localDateOf = (isoTimestamp) => {
+    const dt = new Date(isoTimestamp);
+    return `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+  };
   const week = Array.from({length:7}, (_,i) => {
     const d = new Date(); d.setDate(d.getDate()-6+i);
-    return d.toISOString().slice(0,10);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   });
-  const signupsByDay = week.map(d => profiles.filter(p => p.created_at?.startsWith(d)).length);
+  const signupsByDay = week.map(wd => profiles.filter(p => p.created_at && localDateOf(p.created_at) === wd).length);
 
   const tab = state.adminTab || 'dashboard';
   const tabs = [
@@ -4853,7 +4940,7 @@ function viewAdmin() {
                     const plan = u.plan || 'free';
                     const pColor = planColors[plan] || planColors.free;
                     const pLbl   = planLabel[plan] || plan;
-                    return '<tr class="hover:bg-gray-50 transition-colors"><td class="px-5 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center text-white text-xs font-bold flex-shrink-0">'+((u.name||'?')[0].toUpperCase())+'</div><div><div class="font-medium text-gray-900">'+(u.name||'—')+'</div>'+(u.is_admin?'<span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">ADMIN</span>':'')+'</div></div></td><td class="px-4 py-3 text-gray-500 hidden md:table-cell">'+(u.email||'—')+'</td><td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold '+pColor+'">'+pLbl+'</span></td><td class="px-4 py-3 text-gray-500 hidden md:table-cell">'+petCount+'</td><td class="px-4 py-3 text-gray-400 hidden md:table-cell">'+(u.created_at?formatDate(u.created_at.slice(0,10)):'—')+'</td><td class="px-4 py-3"><button onclick="openChangePlanModal(\''+u.id+'\',\''+((u.name||'').replace(/'/g,"\\'"))+'\',\''+plan+'\')" class="text-xs px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 font-medium transition-colors">Cambiar plan</button></td></tr>';
+                    return '<tr class="hover:bg-gray-50 transition-colors"><td class="px-5 py-3"><div class="flex items-center gap-3"><div class="w-8 h-8 rounded-full bg-brand-gradient flex items-center justify-center text-white text-xs font-bold flex-shrink-0">'+((u.name||'?')[0].toUpperCase())+'</div><div><div class="font-medium text-gray-900">'+(u.name||'—')+'</div>'+(u.is_admin?'<span class="text-[10px] bg-red-100 text-red-600 px-1.5 py-0.5 rounded-full font-semibold">ADMIN</span>':'')+'</div></div></td><td class="px-4 py-3 text-gray-500 hidden md:table-cell">'+(u.email||'—')+'</td><td class="px-4 py-3"><span class="px-2 py-0.5 rounded-full text-xs font-semibold '+pColor+'">'+pLbl+'</span></td><td class="px-4 py-3 text-gray-500 hidden md:table-cell">'+petCount+'</td><td class="px-4 py-3 text-gray-400 hidden md:table-cell">'+(u.created_at?new Date(u.created_at).toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit',year:'numeric'}):'—')+'</td><td class="px-4 py-3"><button onclick="openChangePlanModal(\''+u.id+'\',\''+((u.name||'').replace(/'/g,"\\'"))+'\',\''+plan+'\')" class="text-xs px-3 py-1.5 rounded-lg bg-brand-50 text-brand-700 hover:bg-brand-100 font-medium transition-colors">Cambiar plan</button></td></tr>';
                   }).join('')}
             </tbody>
           </table>
@@ -4920,11 +5007,11 @@ async function initApp() {
     await sb.auth.getSession(); // exchanges the token from hash
     state.currentView = 'resetPassword';
     state.isLoggedIn = false;
-    history.replaceState(null, '', location.pathname);
+    history.replaceState(null, '', ROUTE_PATHS.resetPassword);
     render();
     // Register listener for sign-out after reset
     sb.auth.onAuthStateChange((event) => {
-      if (event === 'SIGNED_OUT') { state.isLoggedIn = false; state.user = null; navigate('login'); }
+      if (event === 'SIGNED_OUT') { state.isLoggedIn = false; state.user = null; navigate('login', {}, { replace: true }); }
     });
     return; // skip normal init
   }
@@ -4936,7 +5023,9 @@ async function initApp() {
     state.user = { name: userName, email: session.user.email, id: session.user.id };
     state.isLoggedIn = true;
     if (!state.currentView || state.currentView === 'login') {
-      state.currentView = 'dashboard';
+      const route = resolveInitialViewFromUrl(true);
+      state.currentView = route ? route.view : 'dashboard';
+      if (route?.params) Object.assign(state, route.params);
     }
     await loadDataFromSupabase();
   }
@@ -4947,6 +5036,7 @@ async function initApp() {
     state.inviteToken = null;
     await acceptPetInvite(token);
     state.currentView = 'dashboard';
+    history.replaceState(null, '', ROUTE_PATHS.dashboard);
   }
 
   // Listen for auth changes
@@ -4954,7 +5044,7 @@ async function initApp() {
     if (event === 'PASSWORD_RECOVERY') {
       state.currentView = 'resetPassword';
       state.isLoggedIn = false;
-      history.replaceState(null, '', location.pathname);
+      history.replaceState(null, '', ROUTE_PATHS.resetPassword);
       render();
       return;
     }
@@ -4962,6 +5052,7 @@ async function initApp() {
       state.isLoggedIn = false;
       state.user = null;
       state.currentView = 'login';
+      history.replaceState(null, '', ROUTE_PATHS.login);
       render();
     }
     if (event === 'TOKEN_REFRESHED' && session) {
@@ -4972,6 +5063,11 @@ async function initApp() {
       };
     }
   });
+
+  // Si el deep link inicial no era válido para el estado de sesión resuelto
+  // (ej: sin sesión pidiendo /pets/x), la URL debe reflejar la vista real.
+  const expectedPath = viewToPath(state.currentView, state);
+  if (location.pathname !== expectedPath) history.replaceState(null, '', expectedPath);
 
   render();
 }
