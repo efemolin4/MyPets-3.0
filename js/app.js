@@ -4720,12 +4720,38 @@ function openEditVaccineModal(petId, vaccineId) {
           </div>
           <div><label class="form-label">Costo (CLP)</label><input id="ev-cost" type="number" min="0" value="${v.cost||''}" class="input-field" /></div>
         </div>
+        <div>
+          <label class="form-label">¿Cuándo recibir la alerta?</label>
+          <div class="grid grid-cols-3 gap-2 mt-1">
+            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 sem antes'},{v:'custom',l:'Personalizado'}].map(o => `
+              <button type="button" onclick="selectEditVaccineAlert('${o.v}')" id="eva-${o.v}"
+                class="py-2.5 px-1 rounded-xl border-2 text-xs font-medium transition-all text-center leading-tight
+                ${(v.alertType||'same')===o.v ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-brand-300'}">
+                ${o.l}
+              </button>`).join('')}
+          </div>
+          <input type="hidden" id="ev-alert" value="${v.alertType||'same'}" />
+          <div id="eva-custom-field" class="${(v.alertType||'same')==='custom'?'':'hidden'} mt-2">
+            <label class="form-label">Días de anticipación</label>
+            <input id="ev-alert-days" type="number" min="1" max="365" value="${v.alertDays||''}" placeholder="Ej: 15" class="input-field" />
+          </div>
+        </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
           <button type="submit" class="btn-primary flex-1">Guardar cambios</button>
         </div>
       </form>
     </div>`);
+}
+
+function selectEditVaccineAlert(val) {
+  document.getElementById('ev-alert').value = val;
+  ['same','week','custom'].forEach(o => {
+    const btn = document.getElementById('eva-'+o);
+    if (btn) btn.className = `py-2.5 px-1 rounded-xl border-2 text-xs font-medium transition-all text-center leading-tight ${o===val ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-brand-300'}`;
+  });
+  const cf = document.getElementById('eva-custom-field');
+  if (cf) cf.classList.toggle('hidden', val !== 'custom');
 }
 
 async function saveEditVaccine(e, petId, vaccineId) {
@@ -4736,16 +4762,18 @@ async function saveEditVaccine(e, petId, vaccineId) {
   const g = id => document.getElementById(id)?.value;
   const date = g('ev-date'), period = g('ev-period');
   const name = g('ev-name'), code = g('ev-code'), cost = g('ev-cost') || null;
+  const alertType = g('ev-alert'), alertDays = g('ev-alert-days') || null;
   const nextDate = period ? addMonths(date, parseFloat(period)) : '';
   if (!isDemoUser()) {
     const { error } = await sb.from('vaccines').update({
-      name, code, date, periodicity: period, next_date: nextDate, cost
+      name, code, date, periodicity: period, next_date: nextDate, cost,
+      alert_type: alertType, alert_days: alertDays
     }).eq('id', vaccineId);
     if (error) { showToast('Error al guardar cambios', 'error'); console.error(error); return; }
   }
   v.name = name; v.code = code; v.date = date;
   v.periodicity = period; v.nextDate = nextDate;
-  v.cost = cost;
+  v.cost = cost; v.alertType = alertType; v.alertDays = alertDays;
   closeModal(); render();
   showToast('Vacuna actualizada ✓', 'success');
 }
@@ -4775,12 +4803,38 @@ function openEditDewormModal(petId, dewormId) {
           <div><label class="form-label">Fecha *</label><input id="edw-date" type="date" required value="${d.date||''}" class="input-field" /></div>
           <div><label class="form-label">Costo (CLP)</label><input id="edw-cost" type="number" min="0" value="${d.cost||''}" class="input-field" /></div>
         </div>
+        <div>
+          <label class="form-label">¿Cuándo recibir la alerta?</label>
+          <div class="grid grid-cols-3 gap-2 mt-1">
+            ${[{v:'same',l:'El mismo día'},{v:'week',l:'1 sem antes'},{v:'custom',l:'Personalizado'}].map(o => `
+              <button type="button" onclick="selectEditDewormAlert('${o.v}')" id="eda-${o.v}"
+                class="py-2.5 px-1 rounded-xl border-2 text-xs font-medium transition-all text-center leading-tight
+                ${(d.alertType||'same')===o.v ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-gray-200 text-gray-500 hover:border-teal-300'}">
+                ${o.l}
+              </button>`).join('')}
+          </div>
+          <input type="hidden" id="edw-alert" value="${d.alertType||'same'}" />
+          <div id="eda-custom-field" class="${(d.alertType||'same')==='custom'?'':'hidden'} mt-2">
+            <label class="form-label">Días de anticipación</label>
+            <input id="edw-alert-days" type="number" min="1" max="365" value="${d.alertDays||''}" placeholder="Ej: 15" class="input-field" />
+          </div>
+        </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
           <button type="submit" class="btn-primary flex-1">Guardar cambios</button>
         </div>
       </form>
     </div>`);
+}
+
+function selectEditDewormAlert(val) {
+  document.getElementById('edw-alert').value = val;
+  ['same','week','custom'].forEach(o => {
+    const btn = document.getElementById('eda-'+o);
+    if (btn) btn.className = `py-2.5 px-1 rounded-xl border-2 text-xs font-medium transition-all text-center leading-tight ${o===val ? 'border-teal-500 bg-teal-50 text-teal-700' : 'border-gray-200 text-gray-500 hover:border-teal-300'}`;
+  });
+  const cf = document.getElementById('eda-custom-field');
+  if (cf) cf.classList.toggle('hidden', val !== 'custom');
 }
 
 async function saveEditDeworming(e, petId, dewormId) {
@@ -4791,15 +4845,17 @@ async function saveEditDeworming(e, petId, dewormId) {
   const g = id => document.getElementById(id)?.value;
   const product = g('edw-product'), type = g('edw-type'), format = g('edw-format');
   const dose = g('edw-dose'), date = g('edw-date'), cost = g('edw-cost') || null;
+  const alertType = g('edw-alert'), alertDays = g('edw-alert-days') || null;
   if (!isDemoUser()) {
     const { error } = await sb.from('dewormings').update({
-      product, type, format, dose, date, cost
+      product, type, format, dose, date, cost, alert_type: alertType, alert_days: alertDays
     }).eq('id', dewormId);
     if (error) { showToast('Error al guardar cambios', 'error'); console.error(error); return; }
   }
   d.product = product; d.type = type;
   d.format = format; d.dose = dose;
   d.date = date; d.cost = cost;
+  d.alertType = alertType; d.alertDays = alertDays;
   closeModal(); render();
   showToast('Desparasitación actualizada ✓', 'success');
 }
@@ -4821,6 +4877,19 @@ function openEditMedModal(petId, medId) {
               ${['mg','ml','Comprimido(s)','Gotas','UI'].map(u => `<option ${u===m.doseUnit?'selected':''}>${u}</option>`).join('')}
             </select>
           </div>
+        </div>
+        <div>
+          <label class="form-label">Frecuencia</label>
+          <div class="flex items-center gap-2">
+            <span class="text-sm text-gray-400 font-medium whitespace-nowrap flex-shrink-0">Cada</span>
+            <input id="em-freq-n" type="number" min="1" max="72" value="${m.freqN||''}" class="input-field !w-16 text-center flex-shrink-0" />
+            <select id="em-freq-unit" class="input-field flex-1">
+              <option value="horas" ${m.freqUnit==='horas'?'selected':''}>Horas</option>
+              <option value="dias" ${m.freqUnit==='dias'?'selected':''}>Días</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
           <div><label class="form-label">Fecha inicio</label><input id="em-start" type="date" value="${m.startDate||''}" class="input-field" /></div>
           <div><label class="form-label">Días tratamiento</label><input id="em-days" type="number" min="1" value="${m.treatmentDays||''}" class="input-field" /></div>
           <div><label class="form-label">Fecha caducidad</label><input id="em-expiry" type="date" value="${m.expiry||''}" class="input-field" /></div>
@@ -4829,6 +4898,18 @@ function openEditMedModal(petId, medId) {
         <div class="flex items-center gap-2">
           <input type="checkbox" id="em-active" ${m.active?'checked':''} class="rounded text-brand-500" />
           <label for="em-active" class="text-sm text-gray-700">Tratamiento activo</label>
+        </div>
+        <hr class="border-gray-100" />
+        <div>
+          <label class="text-sm font-semibold text-gray-700 flex items-center gap-1.5 mb-2">${icon('box','w-4 h-4')} Stock del medicamento <span class="text-gray-400 font-normal">(opcional)</span></label>
+          <div class="grid grid-cols-2 gap-3">
+            <div><label class="form-label">Cantidad total</label><input id="em-stock-total" type="number" min="0" value="${m.stockTotal||''}" class="input-field" /></div>
+            <div><label class="form-label">Unidad</label>
+              <select id="em-stock-unit" class="input-field">
+                ${['Comprimidos','ml','mg','Ampollas','Frascos'].map(u => `<option ${u===m.stockUnit?'selected':''}>${u}</option>`).join('')}
+              </select>
+            </div>
+          </div>
         </div>
         <div class="flex gap-3 pt-2">
           <button type="button" onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
@@ -4847,7 +4928,10 @@ async function saveEditMedication(e, petId, medId) {
   const days = parseInt(g('em-days') || 0);
   const startDate = g('em-start');
   const name = g('em-name'), doseVal = g('em-dose-val'), doseUnit = g('em-unit');
+  const freqN = g('em-freq-n'), freqUnit = g('em-freq-unit');
+  const frequency = freqN ? `Cada ${freqN} ${freqUnit === 'horas' ? 'horas' : 'días'}` : '';
   const expiry = g('em-expiry') || null, cost = g('em-cost') || null;
+  const stockTotal = g('em-stock-total') || null, stockUnit = g('em-stock-unit');
   const active = document.getElementById('em-active')?.checked;
   let endDate = m.endDate || null;
   if (days && startDate) {
@@ -4857,18 +4941,20 @@ async function saveEditMedication(e, petId, medId) {
   if (!isDemoUser()) {
     const { error } = await sb.from('medications').update({
       name, dose_val: doseVal || null, dose_unit: doseUnit,
+      freq_n: freqN || null, freq_unit: freqUnit,
       start_date: startDate, treatment_days: days || null, end_date: endDate,
-      expiry_date: expiry, cost, active
+      expiry_date: expiry, cost, active, stock_qty: stockTotal, stock_unit: stockUnit
     }).eq('id', medId);
     if (error) { showToast('Error al guardar cambios', 'error'); console.error(error); return; }
   }
   m.name = name;
   m.doseVal = doseVal; m.doseUnit = doseUnit;
   m.dose = `${doseVal||''} ${doseUnit||''}`.trim();
+  m.freqN = freqN; m.freqUnit = freqUnit; m.frequency = frequency;
   m.startDate = startDate; m.treatmentDays = days;
   m.endDate = endDate;
   m.expiry = expiry; m.cost = cost;
-  m.active = active;
+  m.active = active; m.stockTotal = stockTotal; m.stockUnit = stockUnit;
   closeModal(); render();
   showToast('Tratamiento actualizado ✓', 'success');
 }
@@ -5267,6 +5353,11 @@ async function initApp() {
     const userName = session.user.user_metadata?.name || session.user.email.split('@')[0];
     state.user = { name: userName, email: session.user.email, id: session.user.id };
     state.isLoggedIn = true;
+    // Cubre sesiones que nunca pasan por register()/login() — ej. un segundo
+    // tutor que crea su cuenta vía el magic link de una invitación — para que
+    // siempre exista una fila en profiles antes de cualquier insert que dependa
+    // de ella (pet_access.user_id, etc.).
+    await sb.from('profiles').upsert({ id: session.user.id, email: session.user.email, name: userName }, { onConflict: 'id' });
     if (!state.currentView || state.currentView === 'login') {
       const route = resolveInitialViewFromUrl(true);
       state.currentView = route ? route.view : 'dashboard';
