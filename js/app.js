@@ -177,7 +177,7 @@ async function loadDataFromSupabase() {
         dateOfBirth: pet.date_of_birth, sex: pet.sex, color: pet.color,
         reproductiveStatus: pet.reproductive_status, chipNumber: pet.microchip,
         personalityTags: pet.personality_tags || [],
-        avatar: pet.avatar_emoji || '',
+        avatar: pet.avatar_emoji || '', photo: pet.photo || null,
         vet: { name: pet.vet_name||'', clinic: pet.vet_clinic||'', phone: pet.vet_phone||'', email: pet.vet_email||'' },
         weightKg: pet.weight_kg ?? '', weightGr: pet.weight_gr ?? '',
         sizeRange: pet.size_range || '', activityLevel: pet.activity_level || 2,
@@ -2473,13 +2473,32 @@ function openExpenseModal() {
 function openEditPetModal(petId) {
   const p = state.pets.find(x => x.id === petId);
   if (!p) return;
-  state.editPetData = { allergies: [...(p.allergies||[])], chronicConditions: [...(p.chronicConditions||[])] };
+  state.editPetData = {
+    allergies: [...(p.allergies||[])], chronicConditions: [...(p.chronicConditions||[])],
+    personalityTags: [...(p.personalityTags||[])], activityLevel: p.activityLevel || 2,
+    photo: p.photo || null,
+  };
   const allergyOpts = ['Pollo','Pescado','Pasto','Polen','Ácaros','Maíz','Trigo','Soya','Lácteos'];
   const conditionOpts = ['Ninguna','Diabetes','Epilepsia','Hipotiroidismo','Hipertiroidismo','Displasia de cadera','Displasia de codo','Enfermedad renal crónica','Enfermedad cardíaca','Artritis','Obesidad','Cushing','Addison','Pancreatitis crónica','Enfermedad inflamatoria intestinal','Asma','Dermatitis atópica','Cáncer','Cataratas','Glaucoma','Otra'];
+  const personalityOpts = ['Juguetón','Cariñoso','Tranquilo','Activo','Tímido','Sociable','Independiente','Protector'];
+  const sizeOpts = [
+    { label: 'Pequeño', range: 'hasta 10 kg' },
+    { label: 'Mediano', range: '10 – 25 kg' },
+    { label: 'Grande',  range: '25 – 45 kg' },
+    { label: 'Gigante', range: 'más de 45 kg' },
+  ];
   openModal(`
     <div class="modal-box p-4 sm:p-6">
       <h3 class="text-lg font-bold text-gray-900 mb-4">Editar mascota</h3>
       <div class="space-y-3 max-h-[70vh] overflow-y-auto pr-1">
+        <div class="flex flex-col items-center mb-2">
+          <div id="ep-photo-preview" class="w-24 h-24 rounded-full bg-gray-100 flex items-center justify-center text-4xl mb-2 overflow-hidden">
+            ${p.photo ? `<img src="${p.photo}" class="w-full h-full object-cover" />` : icon('paw','w-8 h-8 text-gray-300')}
+          </div>
+          <label class="cursor-pointer text-sm text-brand-600 hover:underline font-medium">
+            ${p.photo ? 'Cambiar foto' : 'Subir foto'} <input type="file" accept="image/*" class="hidden" onchange="previewEditPhoto(event)" />
+          </label>
+        </div>
         <div><label class="form-label">Nombre</label><input id="ep-name" value="${p.name||''}" class="input-field" /></div>
         <div class="grid grid-cols-2 gap-3">
           <div><label class="form-label">Especie</label>
@@ -2490,6 +2509,9 @@ function openEditPetModal(petId) {
             <select id="ep-sex" class="input-field">${['Macho','Hembra'].map(s=>`<option ${p.sex===s?'selected':''}>${s}</option>`).join('')}</select>
           </div>
           <div><label class="form-label">Color</label><input id="ep-color" value="${p.color||''}" class="input-field" /></div>
+          <div><label class="form-label">Tamaño</label>
+            <select id="ep-size" class="input-field">${sizeOpts.map(s=>`<option value="${s.label}" ${p.sizeRange===s.label?'selected':''}>${s.label} (${s.range})</option>`).join('')}</select>
+          </div>
           <div><label class="form-label">Peso (kg)</label><input id="ep-wkg" type="number" min="0" value="${p.weightKg||''}" class="input-field" /></div>
           <div><label class="form-label">Peso (gr)</label><input id="ep-wgr" type="number" min="0" max="999" value="${p.weightGr||''}" class="input-field" /></div>
           <div><label class="form-label">Nacimiento</label><input id="ep-dob" type="date" value="${p.dateOfBirth||''}" class="input-field" /></div>
@@ -2497,6 +2519,23 @@ function openEditPetModal(petId) {
             <select id="ep-repro" class="input-field">${['Entero/a','Esterilizado/a','Castrado/a'].map(s=>`<option ${p.reproductiveStatus===s?'selected':''}>${s}</option>`).join('')}</select>
           </div>
           <div class="col-span-2"><label class="form-label">Nro. de chip</label><input id="ep-chip" value="${p.chipNumber||''}" class="input-field" /></div>
+        </div>
+        <div>
+          <label class="form-label">Nivel de actividad</label>
+          <div class="flex gap-3 mt-1">
+            ${[{v:1,l:'Bajo'},{v:2,l:'Medio'},{v:3,l:'Alto'}].map(a => `
+              <button type="button" onclick="setEditActivity(${a.v})" id="ep-act-${a.v}"
+                class="flex-1 py-2 rounded-xl border-2 text-sm font-medium transition-all
+                ${(p.activityLevel||2)===a.v ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-brand-300'}">
+                ${a.l}
+              </button>`).join('')}
+          </div>
+        </div>
+        <div>
+          <label class="form-label">Personalidad</label>
+          <div class="flex flex-wrap gap-2 mt-1" id="ep-personality-tags">
+            ${personalityOpts.map(t => `<button type="button" onclick="toggleEditPersonality('${t}')" class="tag ${(p.personalityTags||[]).includes(t)?'selected':''}">${t}</button>`).join('')}
+          </div>
         </div>
         <div>
           <label class="form-label">Alergias conocidas</label>
@@ -2547,6 +2586,34 @@ function toggleEditCondition(c) {
   });
 }
 
+function toggleEditPersonality(t) {
+  const tags = state.editPetData.personalityTags || (state.editPetData.personalityTags = []);
+  const idx = tags.indexOf(t);
+  if (idx >= 0) tags.splice(idx,1); else tags.push(t);
+  document.querySelectorAll('#ep-personality-tags .tag').forEach(el => {
+    if (el.textContent.trim() === t) el.classList.toggle('selected', tags.includes(t));
+  });
+}
+
+function setEditActivity(level) {
+  state.editPetData.activityLevel = level;
+  [1,2,3].forEach(l => {
+    const btn = document.getElementById('ep-act-'+l);
+    if (btn) btn.className = `flex-1 py-2 rounded-xl border-2 text-sm font-medium transition-all ${l===level ? 'border-brand-500 bg-brand-50 text-brand-700' : 'border-gray-200 text-gray-500 hover:border-brand-300'}`;
+  });
+}
+
+function previewEditPhoto(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    state.editPetData.photo = ev.target.result;
+    const preview = document.getElementById('ep-photo-preview');
+    if (preview) preview.innerHTML = `<img src="${ev.target.result}" class="w-full h-full object-cover rounded-full" />`;
+  };
+  reader.readAsDataURL(file);
+}
+
 // ---- CONTROLADORES ----
 async function handleLogin(e) {
   e.preventDefault();
@@ -2571,8 +2638,9 @@ async function login() {
   state.user = { name: userName, email, id: data.user.id };
   state.isLoggedIn = true;
   saveState();
-  // Backfill silencioso para cuentas creadas antes de que profiles guardara el email
-  await sb.from('profiles').update({ email }).eq('id', data.user.id).is('email', null);
+  // Upsert defensivo: crea el perfil si nunca se creó (ej. trigger ausente) y
+  // de paso hace backfill del email para cuentas creadas antes de guardarlo.
+  await sb.from('profiles').upsert({ id: data.user.id, email, name: userName }, { onConflict: 'id' });
   await loadDataFromSupabase();
   showToast('¡Bienvenido! 👋', 'success');
   navigate('dashboard', {}, { replace: true });
@@ -2608,8 +2676,9 @@ async function register() {
   state.pets = []; state.events = []; state.expenses = [];
   saveState();
   // profiles no guarda el email por defecto (vive en auth.users) — lo copiamos a
-  // la propia fila para que el panel de admin pueda mostrarlo sin acceso a auth.users.
-  if (data.user?.id) await sb.from('profiles').update({ email }).eq('id', data.user.id);
+  // la propia fila (creándola vía upsert si no existía) para que el panel de
+  // admin pueda mostrarlo sin acceso a auth.users.
+  if (data.user?.id) await sb.from('profiles').upsert({ id: data.user.id, email, name }, { onConflict: 'id' });
   await loadDataFromSupabase();
   showToast('¡Cuenta creada! Bienvenido 🎉', 'success');
   navigate('dashboard', {}, { replace: true });
@@ -2714,7 +2783,7 @@ async function savePet() {
     date_of_birth: d.dateOfBirth || null, sex: d.sex, color: d.color,
     reproductive_status: d.reproductiveStatus, microchip: d.chipNumber,
     personality_tags: d.personalityTags || [],
-    avatar_emoji: d.avatar || '',
+    avatar_emoji: d.avatar || '', photo: d.photo || null,
     vet_name: d.vet?.name || '', vet_clinic: d.vet?.clinic || '',
     vet_phone: d.vet?.phone || '', vet_email: d.vet?.email || '',
     weight_kg: d.weightKg || null, weight_gr: d.weightGr || null,
@@ -2840,20 +2909,26 @@ async function saveEditPet(petId) {
   const reproductiveStatus = g('ep-repro');
   const chipNumber = g('ep-chip');
   const vet = { name: g('ep-vet-name')||'', clinic: g('ep-vet-clinic')||'', phone: g('ep-vet-phone')||'', email: g('ep-vet-email')||'' };
+  const sizeRange = g('ep-size');
   const allergies = state.editPetData?.allergies || p.allergies || [];
   const chronicConditions = state.editPetData?.chronicConditions || p.chronicConditions || [];
+  const personalityTags = state.editPetData?.personalityTags || p.personalityTags || [];
+  const activityLevel = state.editPetData?.activityLevel || p.activityLevel || 2;
+  const photo = state.editPetData?.photo ?? p.photo ?? null;
   if (!isDemoUser()) {
     const { error } = await sb.from('pets').update({
       name, species, breed, date_of_birth: dateOfBirth || null, sex, color,
       reproductive_status: reproductiveStatus, microchip: chipNumber,
-      weight_kg: weightKg, weight_gr: weightGr,
-      allergies, chronic_conditions: chronicConditions,
+      weight_kg: weightKg, weight_gr: weightGr, size_range: sizeRange || null,
+      activity_level: activityLevel, personality_tags: personalityTags,
+      allergies, chronic_conditions: chronicConditions, photo,
       vet_name: vet.name, vet_clinic: vet.clinic, vet_phone: vet.phone, vet_email: vet.email,
     }).eq('id', petId);
     if (error) { showToast('Error al guardar', 'error'); console.error(error); return; }
   }
   Object.assign(p, { name, species, breed, dateOfBirth, sex, color, weightKg, weightGr,
-    reproductiveStatus, chipNumber, allergies, chronicConditions, vet });
+    reproductiveStatus, chipNumber, sizeRange, activityLevel, personalityTags, photo,
+    allergies, chronicConditions, vet });
   state.editPetData = null;
   closeModal(); render();
   showToast('Cambios guardados', 'success');
