@@ -2853,21 +2853,41 @@ function openDeletePetWithCode(petId) {
     </div>`);
 }
 
-function sendDeleteCode(petId) {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
-  state.deleteCode = code;
+async function sendDeleteCode(petId) {
   state.deletePetId = petId;
-  // En producción se enviaría por email. Aquí lo mostramos en consola y toast de demo.
-  console.log(`[MyPets] Código de eliminación: ${code}`);
+  if (isDemoUser()) {
+    // No hay sesión real de Supabase en modo demo — simulamos el código acá mismo.
+    state.deleteCode = String(Math.floor(100000 + Math.random() * 900000));
+    document.getElementById('delete-step-1').classList.add('hidden');
+    document.getElementById('delete-step-2').classList.remove('hidden');
+    showToast(`Código enviado a ${state.user?.email} (demo: ${state.deleteCode})`, 'success');
+    return;
+  }
+  // Código real de un solo uso vía Supabase Auth (email OTP) — se envía por el
+  // mismo SMTP configurado en el proyecto. Requiere que la plantilla "Magic Link"
+  // en Supabase → Authentication → Email Templates incluya {{ .Token }}, si no,
+  // el correo solo mostrará el link y no el código de 6 dígitos.
+  const { error } = await sb.auth.signInWithOtp({ email: state.user.email, options: { shouldCreateUser: false } });
+  if (error) { showToast('No se pudo enviar el código', 'error'); console.error(error); return; }
   document.getElementById('delete-step-1').classList.add('hidden');
   document.getElementById('delete-step-2').classList.remove('hidden');
-  showToast(`Código enviado a ${state.user?.email} (demo: ${code})`, 'success');
+  showToast(`Código enviado a ${state.user?.email}`, 'success');
 }
 
-function verifyDeleteCode(petId) {
+async function verifyDeleteCode(petId) {
   const input = document.getElementById('delete-code-input')?.value?.trim();
   const error = document.getElementById('delete-code-error');
-  if (input !== state.deleteCode) {
+  if (isDemoUser()) {
+    if (input !== state.deleteCode) {
+      error?.classList.remove('hidden');
+      document.getElementById('delete-code-input').classList.add('border-red-400');
+      return;
+    }
+    deletePet(petId);
+    return;
+  }
+  const { error: otpError } = await sb.auth.verifyOtp({ email: state.user.email, token: input, type: 'email' });
+  if (otpError) {
     error?.classList.remove('hidden');
     document.getElementById('delete-code-input').classList.add('border-red-400');
     return;
@@ -2881,8 +2901,13 @@ async function deletePet(petId) {
   const pet = state.pets.find(p => p.id === petId);
   const hasTwoTutors = pet?.tutor2?.name;
   if (hasTwoTutors) {
-    if (!isDemoUser()) await sb.from('invitations').delete().eq('pet_id', petId);
-    pet.tutor2 = null;
+    if (!isDemoUser()) {
+      await sb.from('invitations').delete().eq('pet_id', petId);
+      // Quita solo el acceso del usuario actual — el otro tutor conserva el suyo.
+      const { error } = await sb.from('pet_access').delete().eq('pet_id', petId).eq('user_id', state.user.id);
+      if (error) { showToast('Error al eliminar', 'error'); console.error(error); return; }
+    }
+    state.pets = state.pets.filter(p => p.id !== petId);
     showToast(`${pet.name} eliminada de tu perfil`, 'success');
   } else {
     if (!isDemoUser()) {
@@ -5349,20 +5374,29 @@ async function initApp() {
 
   // Check for existing Supabase session
   const { data: { session } } = await sb.auth.getSession();
-  if (session && !state.isLoggedIn) {
-    const userName = session.user.user_metadata?.name || session.user.email.split('@')[0];
-    state.user = { name: userName, email: session.user.email, id: session.user.id };
-    state.isLoggedIn = true;
-    // Cubre sesiones que nunca pasan por register()/login() — ej. un segundo
-    // tutor que crea su cuenta vía el magic link de una invitación — para que
-    // siempre exista una fila en profiles antes de cualquier insert que dependa
-    // de ella (pet_access.user_id, etc.).
-    await sb.from('profiles').upsert({ id: session.user.id, email: session.user.email, name: userName }, { onConflict: 'id' });
-    if (!state.currentView || state.currentView === 'login') {
-      const route = resolveInitialViewFromUrl(true);
-      state.currentView = route ? route.view : 'dashboard';
-      if (route?.params) Object.assign(state, route.params);
+  if (session) {
+    if (!state.isLoggedIn) {
+      const userName = session.user.user_metadata?.name || session.user.email.split('@')[0];
+      state.user = { name: userName, email: session.user.email, id: session.user.id };
+      state.isLoggedIn = true;
+      // Cubre sesiones que nunca pasan por register()/login() — ej. un segundo
+      // tutor que crea su cuenta vía el magic link de una invitación — para que
+      // siempre exista una fila en profiles antes de cualquier insert que dependa
+      // de ella (pet_access.user_id, etc.).
+      await sb.from('profiles').upsert({ id: session.user.id, email: session.user.email, name: userName }, { onConflict: 'id' });
+      if (!state.currentView || state.currentView === 'login') {
+        const route = resolveInitialViewFromUrl(true);
+        state.currentView = route ? route.view : 'dashboard';
+        if (route?.params) Object.assign(state, route.params);
+      }
     }
+    // state.pets/events/expenses nunca se persisten en localStorage (solo user/
+    // isLoggedIn, ver saveState()), así que hay que recargarlos desde Supabase
+    // en TODA carga con sesión activa — no solo la primera vez que se detecta
+    // login. Antes esto solo corría dentro del `if (!state.isLoggedIn)` de arriba,
+    // por lo que recargar la página con sesión ya iniciada dejaba state.pets
+    // vacío y mostraba el onboarding de "agrega tu primera mascota" aunque ya
+    // tuviera una — llevando a mascotas duplicadas.
     await loadDataFromSupabase();
   }
 
