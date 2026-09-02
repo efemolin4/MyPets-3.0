@@ -2838,9 +2838,9 @@ function openDeletePetWithCode(petId) {
         </div>
       </div>
       <div id="delete-step-2" class="hidden">
-        <p class="text-sm text-gray-500 mb-3">Ingresa el código de 6 dígitos enviado a <strong>${email}</strong></p>
-        <input id="delete-code-input" type="text" maxlength="6" placeholder="000000"
-          class="input-field text-center text-2xl tracking-[0.5em] font-bold mb-1" />
+        <p class="text-sm text-gray-500 mb-3">Ingresa el código de verificación enviado a <strong>${email}</strong></p>
+        <input id="delete-code-input" type="text" maxlength="12" placeholder="Código"
+          class="input-field text-center text-2xl tracking-[0.2em] font-bold mb-1" />
         <p id="delete-code-error" class="text-xs text-red-500 text-center mb-3 hidden">Código incorrecto. Intenta nuevamente.</p>
         <div class="flex gap-3">
           <button onclick="closeModal()" class="btn-secondary flex-1">Cancelar</button>
@@ -2866,7 +2866,8 @@ async function sendDeleteCode(petId) {
   // Código real de un solo uso vía Supabase Auth (email OTP) — se envía por el
   // mismo SMTP configurado en el proyecto. Requiere que la plantilla "Magic Link"
   // en Supabase → Authentication → Email Templates incluya {{ .Token }}, si no,
-  // el correo solo mostrará el link y no el código de 6 dígitos.
+  // el correo solo mostrará el link y no el código (su largo lo define Supabase,
+  // no asumir 6 dígitos).
   const { error } = await sb.auth.signInWithOtp({ email: state.user.email, options: { shouldCreateUser: false } });
   if (error) { showToast('No se pudo enviar el código', 'error'); console.error(error); return; }
   document.getElementById('delete-step-1').classList.add('hidden');
