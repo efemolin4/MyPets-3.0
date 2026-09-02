@@ -2887,7 +2887,14 @@ async function verifyDeleteCode(petId) {
     deletePet(petId);
     return;
   }
-  const { error: otpError } = await sb.auth.verifyOtp({ email: state.user.email, token: input, type: 'email' });
+  // Nuestra plantilla de correo ("Magic Link or OTP") mantiene {{ .ConfirmationURL }}
+  // además de {{ .Token }} para no romper el flujo de invitación de segundo tutor,
+  // que sí depende del link. Eso hace que Supabase emita el token como tipo
+  // 'magiclink' en vez de 'email' — se prueban ambos tipos por robustez.
+  let { error: otpError } = await sb.auth.verifyOtp({ email: state.user.email, token: input, type: 'email' });
+  if (otpError) {
+    ({ error: otpError } = await sb.auth.verifyOtp({ email: state.user.email, token: input, type: 'magiclink' }));
+  }
   if (otpError) {
     error?.classList.remove('hidden');
     document.getElementById('delete-code-input').classList.add('border-red-400');
